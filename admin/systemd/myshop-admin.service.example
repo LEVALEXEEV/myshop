@@ -1,0 +1,21 @@
+[Unit]
+Description=MyShop Admin Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/myshop/admin
+EnvironmentFile=/var/www/myshop/admin/.env
+ExecStart=/usr/bin/node /var/www/myshop/admin/server.js
+Restart=always
+RestartSec=2
+
+# hardening (tweak as needed)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/myshop /var/lib
+
+[Install]
+WantedBy=multi-user.target

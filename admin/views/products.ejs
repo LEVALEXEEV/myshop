@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyShop Admin — Products</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 24px; }
+      header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+      table { width:100%; border-collapse: collapse; margin-top: 16px; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align:left; }
+      th { background: #f6f6f6; }
+      a { color: #0b57d0; text-decoration:none; }
+      .actions { display:flex; gap: 10px; }
+      .muted { color:#666; }
+      button { padding: 8px 10px; }
+      .topbar { display:flex; gap:10px; align-items:center; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="topbar">
+        <h1>Products</h1>
+        <a href="/products/new">+ Add</a>
+      </div>
+      <form method="post" action="/logout">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <button type="submit">Logout</button>
+      </form>
+    </header>
+
+    <p class="muted">Edit products and stock. Upload images from product page.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Title</th>
+          <th>Price</th>
+          <th>Category</th>
+          <th>Sold out</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% for (const p of products) { %>
+          <tr>
+            <td><%= p.id %></td>
+            <td><a href="/products/<%= p.id %>"><%= p.title %></a></td>
+            <td><%= p.price %></td>
+            <td><%= p.category %></td>
+            <td><%= p.sold_out ? 'yes' : 'no' %></td>
+            <td>
+              <div class="actions">
+                <a href="/products/<%= p.id %>">Edit</a>
+                <a href="/products/<%= p.id %>/stock">Stock</a>
+              </div>
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </body>
+</html>

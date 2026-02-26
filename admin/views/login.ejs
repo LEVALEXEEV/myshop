@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyShop Admin — Login</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 24px; }
+      .card { max-width: 420px; margin: 48px auto; padding: 16px; border: 1px solid #ddd; border-radius: 12px; }
+      label { display:block; margin-top: 12px; }
+      input { width: 100%; padding: 10px; margin-top: 6px; box-sizing: border-box; }
+      button { margin-top: 16px; padding: 10px 12px; }
+      .error { color: #b00020; margin-top: 12px; }
+      .hint { color: #666; margin-top: 12px; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Admin login</h1>
+      <% if (error) { %>
+        <div class="error"><%= error %></div>
+      <% } %>
+
+      <form method="post" action="/login">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+        <label>
+          Username
+          <input name="username" autocomplete="username" />
+        </label>
+
+        <label>
+          Password
+          <input name="password" type="password" autocomplete="current-password" />
+        </label>
+
+        <button type="submit">Sign in</button>
+      </form>
+
+      <div class="hint">Healthcheck: <a href="/health">/health</a></div>
+    </div>
+  </body>
+</html>
