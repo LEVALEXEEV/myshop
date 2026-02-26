@@ -18,6 +18,11 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# ── DataBase ───────────────────────────────────────────────
-db.local
+# ── DataBase (Local) ───────────────────────────────────────
 docker-compose.yml
+
+# ── Images ─────────────────────────────────────────────────
+# Файлы игнорируются, структура папок сохраняется через .gitkeep
+server/images/**
+!server/images/**/.gitkeep
+sync-images.sh
