@@ -27,9 +27,25 @@ cd "$APP_DIR"
 
 # ── 1. Git ────────────────────────────────────────────────────
 log "Получаем изменения из origin/$BRANCH..."
+
+# Сохраняем images — git reset --hard удалит их если они были в старом коммите
+IMAGES_DIR="$APP_DIR/server/images"
+IMAGES_TMP="$(mktemp -d)"
+if [[ -d "$IMAGES_DIR" ]]; then
+  cp -a "$IMAGES_DIR/." "$IMAGES_TMP/"
+  log "Изображения сохранены во временную папку"
+fi
+
 git fetch origin
 git reset --hard "origin/$BRANCH"
 ok "Код обновлён: $(git log -1 --pretty='%h %s')"
+
+# Восстанавливаем images поверх .gitkeep
+if [[ -d "$IMAGES_TMP" ]]; then
+  cp -a "$IMAGES_TMP/." "$IMAGES_DIR/"
+  rm -rf "$IMAGES_TMP"
+  log "Изображения восстановлены"
+fi
 
 # ── 2. Зависимости ───────────────────────────────────────────
 log "Устанавливаем зависимости server..."
