@@ -1,0 +1,133 @@
+<%- include('partials/_head', { title: 'Промокоды' }) %>
+<%- include('partials/_nav', { csrfToken, active: 'promos' }) %>
+
+<div class="page">
+
+  <% const isEditing = editPromo && editPromo.code !== undefined && promos.some(p => p.code === editPromo.code); %>
+  <% const formAction = isEditing ? `/promos/${editPromo.code}/edit` : '/promos'; %>
+
+  <div class="page-header">
+    <div>
+      <div class="page-header__title">Промокоды</div>
+      <div class="page-header__sub">Управление скидочными промокодами</div>
+    </div>
+    <% if (!isEditing) { %><a href="/promos/new" class="btn btn-primary">+ Новый промокод</a><% } %>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:24px;align-items:start">
+
+    <!-- Форма -->
+    <div class="card">
+      <div class="card__header"><%= isEditing ? `Редактирование: ${editPromo.code}` : 'Новый промокод' %></div>
+      <div class="card__body">
+
+        <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+
+        <form method="post" action="<%= formAction %>">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+          <div style="display:flex;flex-direction:column;gap:14px">
+
+            <% if (!isEditing) { %>
+            <div class="form-group">
+              <label>Код</label>
+              <input class="form-control" type="text" name="code"
+                     value="<%= editPromo ? editPromo.code : '' %>"
+                     placeholder="SUMMER10" required
+                     style="text-transform:uppercase;font-family:monospace;font-size:15px" />
+            </div>
+            <% } %>
+
+            <div class="form-group">
+              <label>Скидка, %</label>
+              <input class="form-control" type="number" name="discount_percent" min="1" max="100" required
+                     value="<%= editPromo ? editPromo.discount_percent : 10 %>" />
+            </div>
+
+            <div class="form-group">
+              <label>Дата истечения <span class="form-hint">(необязательно)</span></label>
+              <input class="form-control" type="datetime-local" name="expires_at"
+                     value="<%= editPromo && editPromo.expires_at ? editPromo.expires_at : '' %>" />
+            </div>
+
+            <div class="form-check">
+              <input type="checkbox" id="single_use" name="single_use"
+                     <%= (editPromo && editPromo.single_use) ? 'checked' : '' %> />
+              <label for="single_use">Одноразовый</label>
+            </div>
+
+            <div class="form-actions" style="margin-top:8px">
+              <button class="btn btn-primary" type="submit"><%= isEditing ? 'Сохранить' : 'Создать' %></button>
+              <% if (isEditing) { %>
+                <a href="/promos" class="btn btn-neutral">Отмена</a>
+              <% } %>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Таблица -->
+    <div class="card">
+      <div class="card__header">Список промокодов</div>
+      <div class="table-wrap">
+        <% if (!promos.length) { %>
+          <div style="padding:32px;text-align:center" class="muted">Промокодов пока нет</div>
+        <% } else { %>
+        <table>
+          <thead>
+            <tr>
+              <th>Код</th>
+              <th>Скидка</th>
+              <th>Тип</th>
+              <th>Использован</th>
+              <th>Истекает</th>
+              <th>Создан</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% for (const p of promos) {
+                 const now = new Date();
+                 const expired = p.expires_at && new Date(p.expires_at) < now;
+                 const depleted = p.single_use && p.usage_count >= 1;
+            %>
+            <tr>
+              <td>
+                <% if (depleted) { %><span class="badge badge-gray"><%= p.code %></span>
+                <% } else if (expired) { %><span class="badge badge-red"><%= p.code %></span>
+                <% } else { %><code><%= p.code %></code><% } %>
+              </td>
+              <td style="font-weight:600"><%= p.discount_percent %>%</td>
+              <td class="muted"><%= p.single_use ? 'Одноразовый' : 'Многоразовый' %></td>
+              <td><span class="badge <%= p.usage_count > 0 ? 'badge-yellow' : 'badge-green' %>"><%= p.usage_count %>&times;</span></td>
+              <td class="<%= expired ? 'text-danger' : 'muted' %>" style="font-size:12px">
+                <%= p.expires_at ? new Date(p.expires_at).toLocaleString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—' %>
+              </td>
+              <td class="muted" style="font-size:12px"><%= new Date(p.created_at).toLocaleDateString('ru-RU') %></td>
+              <td>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <a href="/promos/<%= p.code %>/edit" class="btn btn-ghost btn-sm">Изменить</a>
+                  <form method="post" action="/promos/<%= p.code %>/delete" style="margin:0"
+                        onsubmit="return confirm('Удалить промокод <%= p.code %>?')">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button class="btn btn-danger btn-sm" type="submit">Удалить</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <% } %>
+          </tbody>
+        </table>
+        <div style="padding:12px 14px;font-size:12px" class="muted">
+          <span class="badge badge-red">Код</span> — истёк срок.
+          <span class="badge badge-gray">Код</span> — одноразовый, уже использован.
+        </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

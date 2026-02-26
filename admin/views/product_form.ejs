@@ -1,88 +1,100 @@
-<!doctype html>
-<html lang="ru">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MyShop Admin — <%= mode === 'create' ? 'New Product' : 'Edit Product' %></title>
-    <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 24px; }
-      a { color: #0b57d0; text-decoration:none; }
-      .row { display:flex; gap: 16px; flex-wrap: wrap; }
-      .col { flex: 1 1 320px; }
-      label { display:block; margin-top: 12px; }
-      input, textarea { width: 100%; padding: 10px; margin-top: 6px; box-sizing: border-box; }
-      textarea { min-height: 120px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-      .btns { display:flex; gap: 10px; margin-top: 16px; align-items:center; }
-      button { padding: 10px 12px; }
-      .danger { background: #fff; border: 1px solid #b00020; color: #b00020; }
-      .muted { color:#666; font-size: 14px; }
-      .preview { display:flex; gap:12px; flex-wrap: wrap; margin-top: 12px; }
-      .preview img { max-width: 240px; border: 1px solid #ddd; border-radius: 8px; }
-      .box { border: 1px solid #ddd; border-radius: 12px; padding: 12px; margin-top: 16px; }
-    </style>
-  </head>
-  <body>
-    <p><a href="/products">← back to list</a> · <% if (mode === 'edit') { %><a href="/products/<%= product.id %>/stock">stock</a><% } %></p>
+<%- include('partials/_head', { title: mode === 'create' ? 'Новый товар' : 'Редактирование товара' }) %>
+<%- include('partials/_nav', { csrfToken, active: 'products' }) %>
 
-    <h1><%= mode === 'create' ? 'New product' : `Edit product #${product.id}` %></h1>
+<div class="page">
 
-    <form method="post" action="<%= mode === 'create' ? '/products' : `/products/${product.id}` %>">
-      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="/products">Товары</a>
+    <span class="breadcrumb__sep">/</span>
+    <span><%= mode === 'create' ? 'Новый товар' : product.title %></span>
+  </div>
 
-      <div class="row">
-        <div class="col">
-          <label>
-            Title
-            <input name="title" value="<%= product.title ?? '' %>" required />
-          </label>
+  <!-- Page header -->
+  <div class="page-header">
+    <div>
+      <div class="page-header__title">
+        <%= mode === 'create' ? 'Новый товар' : `Редактирование товара #${product.id}` %>
+      </div>
+    </div>
+    <% if (mode === 'edit') { %>
+      <a href="/products/<%= product.id %>/stock" class="btn btn-ghost">Управление складом</a>
+    <% } %>
+  </div>
 
-          <label>
-            Price (integer)
-            <input name="price" type="number" min="0" step="1" value="<%= product.price ?? 0 %>" required />
-          </label>
+  <!-- Main form -->
+  <form method="post" action="<%= mode === 'create' ? '/products' : `/products/${product.id}` %>">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
 
-          <label>
-            Category
-            <input name="category" value="<%= product.category ?? '' %>" />
-          </label>
+    <div class="form-grid">
 
-          <label>
-            Sold out
-            <input name="sold_out" type="checkbox" <%= product.sold_out ? 'checked' : '' %> />
-          </label>
+      <!-- Left column: basic info -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <div class="card__header">Основная информация</div>
+          <div class="card__body" style="display:flex;flex-direction:column;gap:14px">
 
-          <div class="box">
-            <div class="muted">Image fields should be paths like <b>/images/products/your-file.webp</b></div>
+            <div class="form-group">
+              <label for="f-title">Название <span class="text-danger">*</span></label>
+              <input id="f-title" class="form-control" name="title" value="<%= product.title ?? '' %>" required />
+            </div>
 
-            <label>
-              Image (required)
-              <input name="image" value="<%= product.image ?? '' %>" required />
-            </label>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-group">
+                <label for="f-price">Цена, ₽ <span class="text-danger">*</span></label>
+                <input id="f-price" class="form-control" name="price" type="number" min="0" step="1" value="<%= product.price ?? 0 %>" required />
+              </div>
+              <div class="form-group">
+                <label for="f-category">Категория</label>
+                <input id="f-category" class="form-control" name="category" value="<%= product.category ?? '' %>" />
+              </div>
+            </div>
 
-            <label>
-              Image hover
-              <input name="image_hover" value="<%= product.image_hover ?? '' %>" />
-            </label>
+            <div class="form-check">
+              <input id="f-sold-out" name="sold_out" type="checkbox" <%= product.sold_out ? 'checked' : '' %> />
+              <label for="f-sold-out">Нет в наличии (sold out)</label>
+            </div>
 
-            <label>
-              Size chart
-              <input name="size_chart" value="<%= product.size_chart ?? '' %>" />
-            </label>
+          </div>
+        </div>
 
-            <label>
-              Extra images (one per line)
-              <textarea name="extra_images_text"><%= product.extra_images_text ?? '' %></textarea>
-            </label>
+        <!-- Images -->
+        <div class="card">
+          <div class="card__header">Изображения</div>
+          <div class="card__body" style="display:flex;flex-direction:column;gap:14px">
+            <div class="alert alert-info" style="margin-bottom:0">
+              Пути вида <code>/images/products/your-file.webp</code>
+            </div>
+
+            <div class="form-group">
+              <label for="f-image">Основное фото <span class="text-danger">*</span></label>
+              <input id="f-image" class="form-control" name="image" value="<%= product.image ?? '' %>" required />
+            </div>
+
+            <div class="form-group">
+              <label for="f-image-hover">Фото при наведении</label>
+              <input id="f-image-hover" class="form-control" name="image_hover" value="<%= product.image_hover ?? '' %>" />
+            </div>
+
+            <div class="form-group">
+              <label for="f-size-chart">Таблица размеров</label>
+              <input id="f-size-chart" class="form-control" name="size_chart" value="<%= product.size_chart ?? '' %>" />
+            </div>
+
+            <div class="form-group">
+              <label for="f-extra">Дополнительные фото <span class="form-hint">(по одному на строку)</span></label>
+              <textarea id="f-extra" class="form-control" name="extra_images_text"><%= product.extra_images_text ?? '' %></textarea>
+            </div>
 
             <% if (product.image) { %>
-              <div class="preview">
-                <div>
-                  <div class="muted">image</div>
-                  <img src="<%= product.image %>" alt="image" />
+              <div class="img-preview-grid">
+                <div class="img-preview-item">
+                  <span>Основное</span>
+                  <img src="<%= product.image %>" alt="main" />
                 </div>
                 <% if (product.image_hover) { %>
-                <div>
-                  <div class="muted">hover</div>
+                <div class="img-preview-item">
+                  <span>Наведение</span>
                   <img src="<%= product.image_hover %>" alt="hover" />
                 </div>
                 <% } %>
@@ -90,70 +102,93 @@
             <% } %>
           </div>
         </div>
+      </div>
 
-        <div class="col">
-          <label>
-            Description (HTML allowed)
-            <textarea name="description"><%= product.description ?? '' %></textarea>
-          </label>
+      <!-- Right column: description -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="flex:1">
+          <div class="card__header">Описание</div>
+          <div class="card__body">
+            <div class="form-group">
+              <label for="f-desc">Текст описания <span class="form-hint">(HTML поддерживается)</span></label>
+              <textarea id="f-desc" class="form-control" name="description" style="min-height:260px"><%= product.description ?? '' %></textarea>
+            </div>
+          </div>
         </div>
       </div>
+    </div>
 
-      <div class="btns">
-        <button type="submit">Save</button>
-        <% if (mode === 'edit') { %>
-          <a href="/products/<%= product.id %>/stock">Edit stock</a>
-        <% } %>
-      </div>
-    </form>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><%= mode === 'create' ? 'Создать товар' : 'Сохранить изменения' %></button>
+      <a href="/products" class="btn btn-neutral">Отмена</a>
+    </div>
+  </form>
 
-    <% if (mode === 'edit') { %>
-      <div class="box" style="margin-top:16px;">
-        <h3>Upload & set field</h3>
-        <form method="post" action="/upload" enctype="multipart/form-data">
-          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-          <input type="hidden" name="productId" value="<%= product.id %>" />
+  <!-- Upload -->
+  <% if (mode === 'edit') { %>
+  <div class="card mt-6">
+    <div class="card__header">Загрузка изображения</div>
+    <div class="card__body">
+      <form method="post" action="/upload" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <input type="hidden" name="productId" value="<%= product.id %>" />
 
-          <label>
-            Folder
-            <select name="folder">
+        <div class="form-grid" style="gap:12px">
+          <div class="form-group">
+            <label>Папка</label>
+            <select class="form-control" name="folder">
               <option value="products">products</option>
               <option value="size-charts">size-charts</option>
             </select>
-          </label>
-
-          <label>
-            Set field
-            <select name="field">
-              <option value="image">image</option>
-              <option value="image_hover">image_hover</option>
-              <option value="size_chart">size_chart</option>
-	      <option value="extra_images">extra_images (append)</option>
-            </select>
-          </label>
-
-          <label>
-            Base name
-            <input name="baseName" value="product-<%= product.id %>" />
-          </label>
-
-          <label>
-            File
-            <input name="file" type="file" accept="image/*" required />
-          </label>
-
-          <div class="btns">
-            <button type="submit">Upload & set</button>
           </div>
-        </form>
-      </div>
-    <% } %>
 
-    <% if (mode === 'edit') { %>
-      <form method="post" action="/products/<%= product.id %>/delete" onsubmit="return confirm('Delete product?');" style="margin-top:16px;">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-        <button class="danger" type="submit">Delete</button>
+          <div class="form-group">
+            <label>Установить в поле</label>
+            <select class="form-control" name="field">
+              <option value="image">Основное фото</option>
+              <option value="image_hover">Фото при наведении</option>
+              <option value="size_chart">Таблица размеров</option>
+              <option value="extra_images">Доп. фото (добавить)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Имя файла (базовое)</label>
+            <input class="form-control" name="baseName" value="product-<%= product.id %>" />
+          </div>
+
+          <div class="form-group">
+            <label>Файл <span class="text-danger">*</span></label>
+            <input class="form-control" name="file" type="file" accept="image/*" required style="padding:6px" />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Загрузить и применить</button>
+        </div>
       </form>
-    <% } %>
-  </body>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Delete -->
+  <% if (mode === 'edit') { %>
+  <div class="card mt-4" style="border-color:#fca5a5">
+    <div class="card__header" style="color:var(--clr-danger)">Опасная зона</div>
+    <div class="card__body" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div>
+        <div style="font-weight:500">Удалить товар</div>
+        <div class="form-hint">Это действие необратимо. Товар будет удалён из базы данных.</div>
+      </div>
+      <form method="post" action="/products/<%= product.id %>/delete"
+            onsubmit="return confirm('Удалить товар «<%= product.title %>»? Это действие нельзя отменить.')">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <button class="btn btn-danger-ghost" type="submit">Удалить товар</button>
+      </form>
+    </div>
+  </div>
+  <% } %>
+
+</div>
+</body>
 </html>

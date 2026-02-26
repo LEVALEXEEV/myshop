@@ -1,64 +1,59 @@
-<!doctype html>
-<html lang="ru">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MyShop Admin — Products</title>
-    <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 24px; }
-      header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-      table { width:100%; border-collapse: collapse; margin-top: 16px; }
-      th, td { border: 1px solid #ddd; padding: 8px; text-align:left; }
-      th { background: #f6f6f6; }
-      a { color: #0b57d0; text-decoration:none; }
-      .actions { display:flex; gap: 10px; }
-      .muted { color:#666; }
-      button { padding: 8px 10px; }
-      .topbar { display:flex; gap:10px; align-items:center; }
-    </style>
-  </head>
-  <body>
-    <header>
-      <div class="topbar">
-        <h1>Products</h1>
-        <a href="/products/new">+ Add</a>
-      </div>
-      <form method="post" action="/logout">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-        <button type="submit">Logout</button>
-      </form>
-    </header>
+<%- include('partials/_head', { title: 'Товары' }) %>
+<%- include('partials/_nav', { csrfToken, active: 'products' }) %>
 
-    <p class="muted">Edit products and stock. Upload images from product page.</p>
+<div class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-header__title">Товары</div>
+      <div class="page-header__sub">Управление каталогом. Загружайте изображения со страницы товара.</div>
+    </div>
+    <a href="/products/new" class="btn btn-primary">+ Добавить товар</a>
+  </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Title</th>
-          <th>Price</th>
-          <th>Category</th>
-          <th>Sold out</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% for (const p of products) { %>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
           <tr>
-            <td><%= p.id %></td>
-            <td><a href="/products/<%= p.id %>"><%= p.title %></a></td>
-            <td><%= p.price %></td>
-            <td><%= p.category %></td>
-            <td><%= p.sold_out ? 'yes' : 'no' %></td>
-            <td>
-              <div class="actions">
-                <a href="/products/<%= p.id %>">Edit</a>
-                <a href="/products/<%= p.id %>/stock">Stock</a>
-              </div>
-            </td>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Цена, ₽</th>
+            <th>Категория</th>
+            <th>Статус</th>
+            <th>Действия</th>
           </tr>
-        <% } %>
-      </tbody>
-    </table>
-  </body>
+        </thead>
+        <tbody>
+          <% for (const p of products) { %>
+            <tr>
+              <td class="muted" style="font-size:12px">#<%= p.id %></td>
+              <td>
+                <a href="/products/<%= p.id %>" style="font-weight:500"><%= p.title %></a>
+              </td>
+              <td><%= p.price.toLocaleString('ru-RU') %></td>
+              <td><%= p.category || '—' %></td>
+              <td>
+                <% if (p.sold_out) { %>
+                  <span class="badge badge-red">Нет в наличии</span>
+                <% } else { %>
+                  <span class="badge badge-green">В продаже</span>
+                <% } %>
+              </td>
+              <td>
+                <div style="display:flex;gap:6px">
+                  <a href="/products/<%= p.id %>" class="btn btn-ghost btn-sm">Изменить</a>
+                  <a href="/products/<%= p.id %>/stock" class="btn btn-neutral btn-sm">Склад</a>
+                </div>
+              </td>
+            </tr>
+          <% } %>
+          <% if (!products.length) { %>
+            <tr><td colspan="6" style="text-align:center;padding:32px" class="muted">Товаров пока нет</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</body>
 </html>

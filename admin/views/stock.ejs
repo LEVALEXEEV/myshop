@@ -1,54 +1,61 @@
-<!doctype html>
-<html lang="ru">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MyShop Admin — Stock</title>
-    <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 24px; }
-      a { color: #0b57d0; text-decoration:none; }
-      table { width:100%; border-collapse: collapse; margin-top: 16px; }
-      th, td { border: 1px solid #ddd; padding: 8px; text-align:left; }
-      th { background: #f6f6f6; }
-      input { width: 100%; padding: 8px; box-sizing: border-box; }
-      button { padding: 10px 12px; margin-top: 12px; }
-      .muted { color:#666; }
-    </style>
-  </head>
-  <body>
-    <p><a href="/products">← back to list</a> · <a href="/products/<%= product.id %>">product</a></p>
-    <h1>Stock: <%= product.title %> (#<%= product.id %>)</h1>
+<%- include('partials/_head', { title: 'Склад' }) %>
+<%- include('partials/_nav', { csrfToken, active: 'products' }) %>
 
-    <form method="post" action="/products/<%= product.id %>/stock">
-      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+<div class="page">
 
-      <div class="muted">Enter rows. Empty rows are ignored. All previous rows are replaced.</div>
+  <div class="breadcrumb">
+    <a href="/products">Товары</a>
+    <span class="breadcrumb__sep">/</span>
+    <a href="/products/<%= product.id %>"><%= product.title %></a>
+    <span class="breadcrumb__sep">/</span>
+    <span>Склад</span>
+  </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Size</th>
-            <th>Qty</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% const rows = (stock && stock.length ? stock : [{ size: 's', qty: 0 }, { size: 'm', qty: 0 }, { size: 'l', qty: 0 }]); %>
-          <% for (const row of rows) { %>
+  <div class="page-header">
+    <div>
+      <div class="page-header__title">Склад: <%= product.title %></div>
+      <div class="page-header__sub">Строки с пустым размером игнорируются. Все предыдущие записи будут заменены.</div>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:480px">
+    <div class="card__header">Остатки по размерам</div>
+    <div class="card__body">
+      <form method="post" action="/products/<%= product.id %>/stock">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+        <table style="margin-bottom:16px">
+          <thead>
             <tr>
-              <td><input name="size" value="<%= row.size %>" /></td>
-              <td><input name="qty" type="number" min="0" step="1" value="<%= row.qty %>" /></td>
+              <th>Размер</th>
+              <th>Количество</th>
             </tr>
-          <% } %>
-          <% for (let i = 0; i < 6; i++) { %>
-            <tr>
-              <td><input name="size" value="" placeholder="e.g. xl" /></td>
-              <td><input name="qty" type="number" min="0" step="1" value="" placeholder="0" /></td>
-            </tr>
-          <% } %>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <% const rows = (stock && stock.length ? stock : [{ size: 's', qty: 0 }, { size: 'm', qty: 0 }, { size: 'l', qty: 0 }]); %>
+            <% for (const row of rows) { %>
+              <tr>
+                <td><input class="form-control" name="size" value="<%= row.size %>" /></td>
+                <td><input class="form-control" name="qty" type="number" min="0" step="1" value="<%= row.qty %>" /></td>
+              </tr>
+            <% } %>
+            <% for (let i = 0; i < 6; i++) { %>
+              <tr>
+                <td><input class="form-control" name="size" value="" placeholder="напр., xl" /></td>
+                <td><input class="form-control" name="qty" type="number" min="0" step="1" value="" placeholder="0" /></td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
 
-      <button type="submit">Save stock</button>
-    </form>
-  </body>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Сохранить склад</button>
+          <a href="/products/<%= product.id %>" class="btn btn-neutral">Назад</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+</body>
 </html>

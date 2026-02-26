@@ -1,0 +1,13 @@
+<nav class="topbar">
+  <a class="topbar__brand" href="/products">MyShop Admin</a>
+  <div class="topbar__nav">
+    <a class="topbar__link <%= active === 'products' ? 'active' : '' %>" href="/products">Товары</a>
+    <a class="topbar__link <%= active === 'promos' ? 'active' : '' %>" href="/promos">Промокоды</a>
+  </div>
+  <div class="topbar__right">
+    <form method="post" action="/logout" style="margin:0">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button type="submit" class="btn btn-neutral btn-sm">Выйти</button>
+    </form>
+  </div>
+</nav>

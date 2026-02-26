@@ -45,14 +45,32 @@ fi
 
 [[ -z "${DATABASE_URL:-}" ]] && err "DATABASE_URL не задан и PG_LINK не найден в server/.env(.local)"
 
-export PGPASSWORD
-PGPASSWORD="$(echo "$DATABASE_URL" | sed -E 's|.*://[^:]+:([^@]+)@.*|\1|')"
-PSQL_ARGS=( --no-password -d "$DATABASE_URL" -v ON_ERROR_STOP=1 )
+# ── Выбираем способ запуска psql ─────────────────────────────
+# Если локальный psql есть — используем его напрямую.
+# Иначе — запускаем psql внутри Docker-контейнера.
 
-psql_run() { psql "${PSQL_ARGS[@]}" "$@"; }
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# ── Проверяем psql ────────────────────────────────────────────
-command -v psql &>/dev/null || err "psql не найден. Установи postgresql-client."
+if command -v psql &>/dev/null; then
+  export PGPASSWORD
+  PGPASSWORD="$(echo "$DATABASE_URL" | sed -E 's|.*://[^:]+:([^@]+)@.*|\1|')"
+  PSQL_ARGS=( --no-password -d "$DATABASE_URL" -v ON_ERROR_STOP=1 )
+  psql_run() { psql "${PSQL_ARGS[@]}" "$@"; }
+  log "Используем локальный psql"
+elif command -v docker &>/dev/null && docker compose -f "$ROOT/docker-compose.yml" ps postgres --quiet 2>/dev/null | grep -q .; then
+  # Парсим параметры подключения из DATABASE_URL
+  DB_USER="$(echo "$DATABASE_URL" | sed -E 's|.*://([^:]+):.*|\1|')"
+  DB_NAME="$(echo "$DATABASE_URL" | sed -E 's|.*/([^?]+).*|\1|')"
+  DB_PASS="$(echo "$DATABASE_URL" | sed -E 's|.*://[^:]+:([^@]+)@.*|\1|')"
+  psql_run() {
+    docker compose -f "$ROOT/docker-compose.yml" exec -T \
+      -e PGPASSWORD="$DB_PASS" \
+      postgres psql -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 "$@"
+  }
+  log "Используем psql внутри Docker-контейнера"
+else
+  err "psql не найден и Docker-контейнер не запущен.\nУстанови psql: brew install libpq"
+fi
 
 # ── Создаём таблицу миграций (если ещё нет) ───────────────────
 log "Инициализируем таблицу schema_migrations..."
@@ -78,7 +96,7 @@ for file in $(ls "$MIGRATIONS_DIR"/*.sql 2>/dev/null | sort); do
   fi
 
   log "Применяем $filename ..."
-  psql_run -f "$file" > /dev/null
+  psql_run < "$file" > /dev/null
   psql_run -c "INSERT INTO schema_migrations (filename) VALUES ('$filename');" > /dev/null
   ok "$filename — применена"
   applied=$((applied + 1))
