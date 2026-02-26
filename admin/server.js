@@ -6,7 +6,7 @@ import session from 'express-session';
 import helmet from 'helmet';
 import pgSession from 'connect-pg-simple';
 
-import { PORT, PUBLIC_URL, SESSION_SECRET, SESSION_COOKIE_SECURE } from './config.js';
+import { PORT, PUBLIC_URL, SESSION_SECRET, SESSION_COOKIE_SECURE, SHOP_IMAGES_DIR } from './config.js';
 import pool from './db.js';
 import { ipFilter } from './middleware/ipFilter.js';
 import { asyncHandler } from './middleware/auth.js';
@@ -29,6 +29,9 @@ app.use(helmet({ contentSecurityPolicy: false }));
 
 // ── Body parsing ────────────────────────────────────────────
 app.use(express.urlencoded({ extended: false }));
+
+// ── Static images (preview in admin) ────────────────────────
+app.use('/images', express.static(path.resolve(process.cwd(), SHOP_IMAGES_DIR)));
 
 // ── IP whitelist ────────────────────────────────────────────
 app.use(ipFilter);
