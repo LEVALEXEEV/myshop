@@ -44,7 +44,7 @@ const ADMIN_ALLOWED_IPS = (process.env.ADMIN_ALLOWED_IPS || '')
 const pool = new Pool({ connectionString: PG_LINK });
 
 const app = express();
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
 app.set('views', path.join(process.cwd(), 'views'));
 

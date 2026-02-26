@@ -481,7 +481,7 @@ const ProductModal = ({
                     <Accordion index={2} title="Доставка и оплата">
                       <div className="pb-4 text-xs md:text-sm">
                         <div className="font-bold">СРОК ОТПРАВКИ:</div>
-                        <div className="font-light">1-3 дня.</div>
+                        <div className="font-light">3-5 рабочих дней.</div>
                         <br />
                         <div className="font-bold">ДОСТАВКА:</div>
                         <div className="font-light">
@@ -490,7 +490,7 @@ const ProductModal = ({
                         <br />
                         <div className="font-bold">ОПЛАТА</div>
                         <div className="font-light">
-                          Оплата производиться банковской картой при оформлении
+                          Оплата производится банковской картой при оформлении
                           заказа. После оформления заказа с Вами свяжется
                           менеджер и уточнит детали доставки.
                         </div>
