@@ -34,7 +34,7 @@ export const FooterBrand = React.memo(({ onScrollToTop }) => (
           cursor-pointer
         "
       >
-        2023–2025 ©Resego. Все права защищены.
+        2023–2026 ©Resego. Все права защищены.
       </span>
     </div>
 

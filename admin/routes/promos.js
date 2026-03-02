@@ -17,15 +17,6 @@ router.get('/', requireAuth, csrfProtection, asyncHandler(async (req, res) => {
   res.render('promos', { csrfToken: req.csrfToken(), promos: rows, editPromo: null, error: null });
 }));
 
-router.get('/new', requireAuth, csrfProtection, (req, res) => {
-  res.render('promos', {
-    csrfToken: req.csrfToken(),
-    promos: [],
-    editPromo: { code: '', discount_percent: 10, single_use: true, expires_at: '' },
-    error: null,
-  });
-});
-
 router.post('/', requireAuth, csrfProtection, asyncHandler(async (req, res) => {
   const code = (req.body.code || '').toUpperCase().trim();
   const pct = intOrNull(req.body.discount_percent);
