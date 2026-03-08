@@ -16,6 +16,7 @@ import productsRouter from './routes/products.js';
 import stockRouter from './routes/stock.js';
 import promosRouter from './routes/promos.js';
 import uploadRouter from './routes/upload.js';
+import ordersRouter from './routes/orders.js';
 
 const PgSessionStore = pgSession(session);
 
@@ -69,6 +70,7 @@ app.get('/', (req, res) => res.redirect('/products'));
 app.use('/products', productsRouter);
 app.use('/products/:id/stock', stockRouter);
 app.use('/promos', promosRouter);
+app.use('/orders', ordersRouter);
 app.use('/upload', uploadRouter);
 
 // ── Error handler ────────────────────────────────────────────

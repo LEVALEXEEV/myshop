@@ -1,0 +1,167 @@
+<%- include('partials/_head', { title: 'Заказ #' + order.id }) %>
+<%- include('partials/_nav', { csrfToken, active: 'orders' }) %>
+
+<div class="page">
+
+  <div class="breadcrumb">
+    <a href="/orders">Заказы</a>
+    <span class="breadcrumb__sep">/</span>
+    <span>Заказ #<%= order.id %></span>
+  </div>
+
+  <div class="page-header">
+    <div>
+      <div class="page-header__title">Заказ #<%= order.id %></div>
+      <div class="page-header__sub">
+        <%
+          const date = new Date(order.created_at).toLocaleString('ru-RU', {
+            day: '2-digit', month: 'long', year: 'numeric',
+            hour: '2-digit', minute: '2-digit',
+          });
+        %>
+        <%= date %>
+      </div>
+    </div>
+    <!-- Смена статуса -->
+    <form method="post" action="/orders/<%= order.id %>/status" style="display:flex;gap:8px;align-items:center">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <select class="form-control" name="status" style="max-width:180px">
+        <% for (const s of statuses) { %>
+          <option value="<%= s %>" <%= order.status === s ? 'selected' : '' %>><%= statusLabels[s] %></option>
+        <% } %>
+      </select>
+      <button class="btn btn-primary btn-sm" type="submit">Сохранить</button>
+    </form>
+  </div>
+
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start">
+
+    <!-- Товары -->
+    <div>
+      <div class="card">
+        <div class="card__header">Состав заказа</div>
+        <div class="table-wrap">
+          <table style="table-layout:fixed;width:100%">
+            <colgroup>
+              <col style="width:60%" />
+              <col style="width:20%" />
+              <col style="width:20%" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Товар</th>
+                <th>Размер</th>
+                <th>Кол-во</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%
+                let subtotal = 0;
+                for (const item of items) {
+                  const lineTotal = item.price * item.qty;
+                  subtotal += lineTotal;
+              %>
+              <tr>
+                <td style="font-weight:500">
+                  <%= item.title %>
+                  <div class="muted" style="font-size:11px">#<%= item.id %></div>
+                </td>
+                <td><%= item.size %></td>
+                <td><%= item.qty %></td>
+              </tr>
+              <% } %>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2" style="text-align:right;font-weight:600;padding:12px 14px;border-top:1px solid var(--clr-border)">
+                  Итого к оплате:
+                </td>
+                <td style="font-weight:700;font-size:16px;padding:12px 14px;border-top:1px solid var(--clr-border)">
+                  <%= order.total.toLocaleString('ru-RU') %> ₽
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Детали -->
+    <div style="display:flex;flex-direction:column;gap:20px">
+
+      <!-- Статус -->
+      <div class="card">
+        <div class="card__header">Статус</div>
+        <div class="card__body">
+          <% if (order.status === 'paid') { %>
+            <span class="badge badge-green" style="font-size:13px;padding:4px 12px">Оплачен</span>
+          <% } else if (order.status === 'completed') { %>
+            <span class="badge badge-blue" style="font-size:13px;padding:4px 12px">Доставлен</span>
+          <% } else if (order.status === 'cancelled') { %>
+            <span class="badge badge-red" style="font-size:13px;padding:4px 12px">Отменён</span>
+          <% } else { %>
+            <span class="badge badge-yellow" style="font-size:13px;padding:4px 12px">Ожидает оплаты</span>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Покупатель -->
+      <div class="card">
+        <div class="card__header">Покупатель</div>
+        <div class="card__body" style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:2px">Имя</div>
+            <div><%= order.full_name %></div>
+          </div>
+          <div>
+            <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:2px">E-mail</div>
+            <div><a href="mailto:<%= order.email %>"><%= order.email %></a></div>
+          </div>
+          <div>
+            <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:2px">Телефон</div>
+            <div><a href="tel:<%= order.phone %>"><%= order.phone %></a></div>
+          </div>
+          <% if (order.telegram) { %>
+          <div>
+            <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:2px">Telegram</div>
+            <div><a href="https://t.me/<%= order.telegram %>" target="_blank">@<%= order.telegram %></a></div>
+          </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Доставка -->
+      <div class="card">
+        <div class="card__header">Доставка</div>
+        <div class="card__body" style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:2px">Способ</div>
+            <div>
+              <% if (order.shipping_method === 'delivery') { %>
+                <span class="badge badge-yellow">Доставка</span>
+              <% } else { %>
+                <span class="badge badge-gray">Самовывоз</span>
+              <% } %>
+            </div>
+          </div>
+          <% if (order.address) { %>
+          <div>
+            <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:2px">Адрес</div>
+            <div style="font-size:13px"><%= order.address %></div>
+          </div>
+          <% } %>
+          <% if (order.promo) { %>
+          <div>
+            <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:2px">Промокод</div>
+            <code><%= order.promo %></code>
+          </div>
+          <% } %>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

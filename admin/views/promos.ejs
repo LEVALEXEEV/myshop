@@ -93,7 +93,7 @@
             %>
             <tr>
               <td>
-                <% if (depleted) { %><span class="badge badge-gray"><%= p.code %></span>
+                <% if (depleted) { %><span class="badge badge-gray line-trough"><%= p.code %></span>
                 <% } else if (expired) { %><span class="badge badge-red"><%= p.code %></span>
                 <% } else { %><code><%= p.code %></code><% } %>
               </td>
@@ -120,7 +120,7 @@
         </table>
         <div style="padding:12px 14px;font-size:12px" class="muted">
           <span class="badge badge-red">Код</span> — истёк срок.
-          <span class="badge badge-gray">Код</span> — одноразовый, уже использован.
+          <span class="badge badge-gray line-trough">Код</span> — одноразовый, уже использован.
         </div>
         <% } %>
       </div>
