@@ -52,7 +52,7 @@ log "Устанавливаем зависимости server..."
 (cd "$APP_DIR/server" && npm ci --omit=dev)
 
 log "Устанавливаем зависимости admin..."
-(cd "$APP_DIR/admin" && npm ci --omit=dev)
+(cd "$APP_DIR/admin" && npm ci)
 
 log "Устанавливаем зависимости client..."
 (cd "$APP_DIR/client" && npm ci)

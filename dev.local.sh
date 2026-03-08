@@ -22,6 +22,7 @@ err()  { echo -e "${RED}[dev]${RESET} $*" >&2; }
 
 # ── PIDs дочерних процессов ───────────────────────────────────
 PIDS=()
+STARTED_DOCKER=0
 
 cleanup() {
   echo ""
