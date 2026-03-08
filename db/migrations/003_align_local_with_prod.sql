@@ -9,23 +9,34 @@ BEGIN;
 -- 1. products — типы колонок, NOT NULL, DEFAULT
 -- ═════════════════════════════════════════════════════════════
 
--- extra_images: jsonb DEFAULT '[]' → TEXT[]
-CREATE OR REPLACE FUNCTION _tmp_jsonb_to_text_array(j jsonb)
-RETURNS text[] LANGUAGE sql IMMUTABLE AS $$
-  SELECT CASE
-    WHEN j IS NULL OR jsonb_typeof(j) <> 'array' THEN NULL
-    ELSE ARRAY(SELECT jsonb_array_elements_text(j))
-  END;
+-- extra_images: jsonb DEFAULT '[]' → TEXT[] (только если ещё jsonb)
+DO $$
+DECLARE
+  col_type text;
+BEGIN
+  SELECT data_type INTO col_type
+    FROM information_schema.columns
+   WHERE table_schema = 'public'
+     AND table_name   = 'products'
+     AND column_name  = 'extra_images';
+
+  IF col_type = 'jsonb' THEN
+    CREATE OR REPLACE FUNCTION _tmp_jsonb_to_text_array(j jsonb)
+    RETURNS text[] LANGUAGE sql IMMUTABLE AS $f$
+      SELECT CASE
+        WHEN j IS NULL OR jsonb_typeof(j) <> 'array' THEN NULL
+        ELSE ARRAY(SELECT jsonb_array_elements_text(j))
+      END;
+    $f$;
+
+    ALTER TABLE products ALTER COLUMN extra_images DROP DEFAULT;
+    ALTER TABLE products ALTER COLUMN extra_images TYPE text[]
+      USING _tmp_jsonb_to_text_array(extra_images);
+
+    DROP FUNCTION _tmp_jsonb_to_text_array(jsonb);
+  END IF;
+END
 $$;
-
-ALTER TABLE products
-  ALTER COLUMN extra_images DROP DEFAULT;
-
-ALTER TABLE products
-  ALTER COLUMN extra_images TYPE text[]
-  USING _tmp_jsonb_to_text_array(extra_images);
-
-DROP FUNCTION _tmp_jsonb_to_text_array(jsonb);
 
 -- title: text NOT NULL → VARCHAR(255)
 ALTER TABLE products ALTER COLUMN title DROP NOT NULL;
@@ -98,7 +109,15 @@ ALTER TABLE promo_codes ALTER COLUMN metadata SET NOT NULL;
 ALTER TABLE promo_codes ALTER COLUMN metadata SET DEFAULT '{}'::jsonb;
 
 -- PK на code
-ALTER TABLE promo_codes ADD CONSTRAINT promo_codes_pkey PRIMARY KEY (code);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'promo_codes_pkey'
+  ) THEN
+    ALTER TABLE promo_codes ADD CONSTRAINT promo_codes_pkey PRIMARY KEY (code);
+  END IF;
+END
+$$;
 
 -- CHECK constraints (IF NOT EXISTS не поддерживается — используем DO-блок)
 DO $$
@@ -144,7 +163,15 @@ ALTER SEQUENCE subscribers_id_seq OWNED BY subscribers.id;
 SELECT setval('subscribers_id_seq', COALESCE((SELECT MAX(id) FROM subscribers), 0));
 
 -- PK на id
-ALTER TABLE subscribers ADD CONSTRAINT subscribers_pkey PRIMARY KEY (id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'subscribers_pkey'
+  ) THEN
+    ALTER TABLE subscribers ADD CONSTRAINT subscribers_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
 -- email UNIQUE уже есть (subscribers_email_key)
 
@@ -208,8 +235,15 @@ ALTER TABLE product_stock ALTER COLUMN qty DROP DEFAULT;
 -- 11. admin_sessions — переименовать PK constraint → session_pkey
 -- ═════════════════════════════════════════════════════════════
 
-ALTER TABLE admin_sessions
-  RENAME CONSTRAINT admin_sessions_pkey TO session_pkey;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'admin_sessions_pkey'
+  ) THEN
+    ALTER TABLE admin_sessions RENAME CONSTRAINT admin_sessions_pkey TO session_pkey;
+  END IF;
+END
+$$;
 
 
 COMMIT;
