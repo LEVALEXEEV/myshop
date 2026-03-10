@@ -3,6 +3,7 @@ import csrf from 'csurf';
 
 import pool from '../db.js';
 import { requireAuth, asyncHandler } from '../middleware/auth.js';
+import { exportOrdersToSheets } from '../utils/sheets.js';
 
 const router = express.Router();
 const csrfProtection = csrf();
@@ -68,6 +69,7 @@ router.get('/', requireAuth, csrfProtection, asyncHandler(async (req, res) => {
         statuses: STATUSES,
         promos,
         summary,
+        query: req.query,
     });
 }));
 
@@ -118,6 +120,46 @@ router.post('/:id/status', requireAuth, csrfProtection, asyncHandler(async (req,
 
     const back = req.headers.referer || '/orders';
     res.redirect(back);
+}));
+
+router.post('/export-to-sheets', requireAuth, csrfProtection, asyncHandler(async (req, res) => {
+    // Берём только промокоды с флагом export_to_sheets = true
+    const { rows: promoCodes } = await pool.query(
+        `SELECT code FROM promo_codes WHERE export_to_sheets = TRUE ORDER BY code`,
+    );
+
+    if (!promoCodes.length) {
+        return res.redirect('/orders?exportError=no_promos');
+    }
+
+    const codes = promoCodes.map((p) => p.code);
+
+    const { rows: orders } = await pool.query(
+        `SELECT id, promo, total, status, created_at
+           FROM orders
+          WHERE promo = ANY($1)
+          ORDER BY promo, created_at DESC`,
+        [codes],
+    );
+
+    // Группируем по промокоду
+    const groupMap = new Map();
+    for (const code of codes) groupMap.set(code, []);
+    for (const o of orders) groupMap.get(o.promo)?.push(o);
+
+    const groups = [...groupMap.entries()].map(([promo, ordersList]) => ({
+        promo,
+        orders: ordersList,
+    }));
+
+    const url = await exportOrdersToSheets(groups).catch((err) => {
+        console.error('[sheets] export error:', err);
+        return null;
+    });
+
+    if (!url) return res.redirect('/orders?exportError=fail');
+
+    res.redirect(`/orders?exportUrl=${encodeURIComponent(url)}`);
 }));
 
 export default router;

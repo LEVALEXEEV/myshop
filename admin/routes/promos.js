@@ -10,7 +10,7 @@ const csrfProtection = csrf();
 
 router.get('/', requireAuth, csrfProtection, asyncHandler(async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT code, discount_percent, single_use, expires_at, usage_count, created_at
+    `SELECT code, discount_percent, single_use, expires_at, usage_count, created_at, export_to_sheets
        FROM promo_codes
       ORDER BY created_at DESC`
   );
@@ -25,12 +25,12 @@ router.post('/', requireAuth, csrfProtection, asyncHandler(async (req, res) => {
 
   if (!code || pct === null || pct < 1 || pct > 100) {
     const { rows } = await pool.query('SELECT * FROM promo_codes ORDER BY created_at DESC');
-    return res.status(400).render('promos', {
-      csrfToken: req.csrfToken(),
-      promos: rows,
-      editPromo: { code, discount_percent: pct, single_use, expires_at: req.body.expires_at },
-      error: 'Код обязателен, скидка от 1 до 100',
-    });
+      return res.status(400).render('promos', {
+        csrfToken: req.csrfToken(),
+        promos: rows,
+        editPromo: { code, discount_percent: pct, single_use, expires_at: req.body.expires_at },
+        error: 'Код обязателен, скидка от 1 до 100',
+      });
   }
 
   try {
@@ -102,6 +102,15 @@ router.post('/:code/edit', requireAuth, csrfProtection, asyncHandler(async (req,
 
 router.post('/:code/delete', requireAuth, csrfProtection, asyncHandler(async (req, res) => {
   await pool.query('DELETE FROM promo_codes WHERE code = $1', [req.params.code.toUpperCase()]);
+  res.redirect('/promos');
+}));
+
+router.post('/:code/toggle-export', requireAuth, csrfProtection, asyncHandler(async (req, res) => {
+  const code = req.params.code.toUpperCase();
+  await pool.query(
+    'UPDATE promo_codes SET export_to_sheets = NOT export_to_sheets WHERE code = $1',
+    [code],
+  );
   res.redirect('/promos');
 }));
 

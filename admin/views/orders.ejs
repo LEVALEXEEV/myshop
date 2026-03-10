@@ -7,7 +7,27 @@
       <div class="page-header__title">Заказы</div>
       <div class="page-header__sub">Всего: <%= summary.total %></div>
     </div>
+    <form method="post" action="/orders/export-to-sheets" style="margin:0">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button class="btn btn-neutral btn-sm" type="submit">↑ Выгрузить в Google Sheets</button>
+    </form>
   </div>
+
+  <% if (query.exportUrl) { %>
+    <div class="alert alert-success" style="margin-bottom:16px">
+      Выгрузка завершена. <a href="<%= query.exportUrl %>" target="_blank" rel="noopener">Открыть таблицу →</a>
+    </div>
+  <% } %>
+  <% if (query.exportError === 'no_promos') { %>
+    <div class="alert alert-danger" style="margin-bottom:16px">
+      Нет промокодов с включённой выгрузкой. Включи флаг «Выгрузка» в разделе <a href="/promos">Промокоды</a>.
+    </div>
+  <% } %>
+  <% if (query.exportError === 'fail') { %>
+    <div class="alert alert-danger" style="margin-bottom:16px">
+      Ошибка выгрузки в Google Sheets. Проверь настройки GOOGLE_SA_KEY_PATH / GOOGLE_SHEETS_ID в .env.
+    </div>
+  <% } %>
 
   <!-- Фильтры -->
   <div class="card" style="margin-bottom:20px">

@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# ── Google Service Account ключ ────────────────────────────
+admin/credentials/*.json
+
 # ── Зависимости ────────────────────────────────────────────
 node_modules/
 **/node_modules/
