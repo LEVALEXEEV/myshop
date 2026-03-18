@@ -7,11 +7,13 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import PaymentResult from './pages/PaymentResult';
 import NotFoundPage from './pages/NotFoundPage';
 import { ModalProvider } from './context/ModalContext';
+import RouteTracker from './components/Analytics/RouteTracker';
 
 function App() {
   return (
     <ModalProvider>
       <BrowserRouter>
+        <RouteTracker />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />
