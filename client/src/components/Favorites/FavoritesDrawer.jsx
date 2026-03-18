@@ -5,10 +5,13 @@ import { FavoriteItem } from './FavoriteItem';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import axios from 'axios';
 import Toast from '../ui/Toast';
+import useABExperiment from '../Analytics/useABExperiment';
+import { trackAbConversion } from '../Analytics/metrika';
 
 const FavoritesDrawer = ({ isOpen, onClose }) => {
   const { favorites, toggleFavorite } = useFavorites();
   const { cart, addToCart, updateQuantity, openCart } = useCart();
+  const variant = useABExperiment('catalog_cards_test', ['A', 'B', 'C']);
   const [stockMap, setStockMap] = useState({});
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
@@ -63,8 +66,10 @@ const FavoritesDrawer = ({ isOpen, onClose }) => {
             selectedSize: item.selectedSize,
             quantity: inCart + 1,
           });
+          trackAbConversion('catalog_cards_test', variant, 'add_to_cart');
         } else {
           addToCart({ ...item, quantity: 1 });
+          trackAbConversion('catalog_cards_test', variant, 'add_to_cart');
         }
 
         onClose();
@@ -81,20 +86,18 @@ const FavoritesDrawer = ({ isOpen, onClose }) => {
   return (
     <>
       <div
-        className={`fixed inset-0 z-[100] transition-opacity duration-300 ${
-          isOpen
-            ? 'opacity-100 pointer-events-auto'
-            : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 z-[100] transition-opacity duration-300 ${isOpen
+          ? 'opacity-100 pointer-events-auto'
+          : 'opacity-0 pointer-events-none'
+          }`}
       >
         <div className="absolute inset-0 bg-black/10" onClick={onClose} />
 
         <div
           className={`absolute right-0 top-0 h-full w-full pb-4 md:pb-10 md:pt-10 md:px-10 max-w-[560px]
                     bg-white shadow-[0_0_10px_0_rgba(0,0,0,0.2)]
-                    transform transition-transform duration-300 overflow-y-auto ${
-                      isOpen ? 'translate-x-0' : 'translate-x-full'
-                    }`}
+                    transform transition-transform duration-300 overflow-y-auto ${isOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
         >
           <div
             className="

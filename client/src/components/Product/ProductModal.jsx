@@ -10,6 +10,8 @@ import RelatedProducts from './RelatedProducts';
 import Toast from '../ui/Toast';
 import axios from 'axios';
 import { useModal } from '../../context/ModalContext';
+import useABExperiment from '../Analytics/useABExperiment';
+import { trackAbConversion } from '../Analytics/metrika';
 
 const ProductModal = ({
   product,
@@ -35,6 +37,7 @@ const ProductModal = ({
   const relatedRef = useRef(null);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { cart, addToCart, updateQuantity, openCart } = useCart();
+  const variant = useABExperiment('catalog_cards_test', ['A', 'B', 'C']);
 
   const allImages = useMemo(
     () => [
@@ -188,6 +191,7 @@ const ProductModal = ({
           selectedSize,
           quantity: newTotal,
         });
+        trackAbConversion('catalog_cards_test', variant, 'add_to_cart');
       } else {
         if (qty > 9999) {
           setToastVariant('error');
@@ -239,10 +243,7 @@ const ProductModal = ({
     onClose,
     openCart,
   ]);
-
-  useEffect(() => {
-    setShowRelated(false);
-  }, [product.id]);
+ 
 
   useEffect(() => {
     if (!relatedRef.current) return;

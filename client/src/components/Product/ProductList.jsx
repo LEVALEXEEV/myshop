@@ -4,9 +4,16 @@ import axios from 'axios';
 import { useKeenSlider } from 'keen-slider/react';
 import 'keen-slider/keen-slider.min.css';
 import ProductModal from './ProductModal';
-import { Squares2X2Icon, ViewColumnsIcon } from '@heroicons/react/24/outline';
+import {
+  Squares2X2Icon,
+  ViewColumnsIcon,
+  ShoppingBagIcon,
+} from '@heroicons/react/24/outline';
 import { CATEGORY_OPTIONS } from '../../constants/productCategories';
 import { useAnimateOnView } from '../../hooks/useAnimateOnView';
+import useABExperiment from '../Analytics/useABExperiment';
+import { trackAbConversion } from '../Analytics/metrika';
+import { useCart } from '../../context/CartContext';
 
 const SLIDER_OPTIONS = {
   loop: false,
@@ -16,6 +23,17 @@ const SLIDER_OPTIONS = {
   },
   mode: 'snap',
   renderMode: 'performance',
+};
+
+const SIZE_ORDER = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl'];
+
+const sortSizes = (a, b) => {
+  const ia = SIZE_ORDER.indexOf(String(a).toLowerCase());
+  const ib = SIZE_ORDER.indexOf(String(b).toLowerCase());
+  if (ia === -1 && ib === -1) return String(a).localeCompare(String(b));
+  if (ia === -1) return 1;
+  if (ib === -1) return -1;
+  return ia - ib;
 };
 
 const shuffle = (arr) => {
@@ -87,6 +105,107 @@ const ProductList = () => {
 
   const [sliderRef, slider] = useKeenSlider(sliderOptions);
 
+  const variant = useABExperiment('catalog_cards_test', ['A', 'B', 'C']);
+  const { addToCart, openCart, cart } = useCart();
+  const [quickPickerFor, setQuickPickerFor] = useState(null);
+  const [quickSizesMap, setQuickSizesMap] = useState({});
+  const [quickLoadingFor, setQuickLoadingFor] = useState(null);
+
+  const handleQuickAdd = useCallback(
+    async (e, product, selectedSize) => {
+      e.stopPropagation();
+      e.preventDefault();
+      try {
+        const { data: fresh } = await axios.get(`/api/products/${product.id}`);
+        const entry = selectedSize
+          ? (fresh.stock || []).find(
+              (s) => s.size === selectedSize && s.qty > 0
+            ) || null
+          : (fresh.stock || []).find((s) => s.qty > 0) || null;
+        if (!entry) return;
+
+        const exists = cart.find(
+          (p) => p.id === product.id && p.selectedSize === entry.size
+        );
+        const inCart = exists ? exists.quantity : 0;
+        if (entry.qty - inCart < 1) return;
+
+        addToCart({
+          id: product.id,
+          title: product.title,
+          price: product.price,
+          image: product.image,
+          selectedSize: entry.size,
+          quantity: 1,
+        });
+        trackAbConversion('catalog_cards_test', variant, 'add_to_cart');
+        openCart();
+        setQuickPickerFor(null);
+      } catch (err) {
+        console.error('Quick add failed', err);
+      }
+    },
+    [addToCart, cart, openCart, variant]
+  );
+
+  const handleQuickToggle = useCallback(
+    async (e, product) => {
+      e.stopPropagation();
+      e.preventDefault();
+
+      if (quickPickerFor === product.id) {
+        setQuickPickerFor(null);
+        return;
+      }
+
+      setQuickLoadingFor(product.id);
+      try {
+        const { data: fresh } = await axios.get(`/api/products/${product.id}`);
+        const sizes = (fresh.stock || [])
+          .filter((s) => s.qty > 0)
+          .map((s) => s.size)
+          .sort(sortSizes);
+        setQuickSizesMap((prev) => ({ ...prev, [product.id]: sizes }));
+        if (sizes.length > 0) {
+          setQuickPickerFor(product.id);
+        }
+      } catch (err) {
+        console.error('Quick size fetch failed', err);
+      } finally {
+        setQuickLoadingFor(null);
+      }
+    },
+    [quickPickerFor]
+  );
+
+  useEffect(() => {
+    if (quickPickerFor == null) return;
+
+    const onPointerDown = (event) => {
+      if (!(event.target instanceof Element)) return;
+      const inQuickPicker = event.target.closest(
+        `[data-quick-picker-root="${quickPickerFor}"]`
+      );
+      if (!inQuickPicker) {
+        setQuickPickerFor(null);
+      }
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setQuickPickerFor(null);
+      }
+    };
+
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [quickPickerFor]);
+
   useEffect(() => {
     if (viewMode !== 'carousel' || !slider) return;
     const id = setInterval(() => slider.current.next(), 5000);
@@ -105,9 +224,8 @@ const ProductList = () => {
             {CATEGORY_OPTIONS.map(({ key, label }) => (
               <button
                 key={key}
-                className={`uppercase cursor-pointer ${
-                  category === key ? 'text-gray-500' : 'text-black'
-                }`}
+                className={`uppercase cursor-pointer ${category === key ? 'text-gray-500' : 'text-black'
+                  }`}
                 onClick={() => setCategory(key)}
               >
                 {label}
@@ -122,10 +240,9 @@ const ProductList = () => {
               onClick={() => setViewMode('grid')}
               className={`
                 p-2 rounded cursor-pointer transition-colors duration-200
-                ${
-                  viewMode === 'grid'
-                    ? 'bg-gray-200 text-gray-800'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                ${viewMode === 'grid'
+                  ? 'bg-gray-200 text-gray-800'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                 }
               `}
               aria-label="Grid View"
@@ -136,10 +253,9 @@ const ProductList = () => {
               onClick={() => setViewMode('carousel')}
               className={`
                 p-2 rounded cursor-pointer transition-colors duration-200
-                ${
-                  viewMode === 'carousel'
-                    ? 'bg-gray-200 text-gray-800'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                ${viewMode === 'carousel'
+                  ? 'bg-gray-200 text-gray-800'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                 }
               `}
               aria-label="Carousel View"
@@ -210,15 +326,13 @@ const ProductList = () => {
                     alt={product.title}
                     className={`
                       w-full h-full object-cover transition-opacity duration-300
-                      ${
-                        product.sold_out
-                          ? 'opacity-100 group-hover:opacity-100'
-                          : ''
+                      ${product.sold_out
+                        ? 'opacity-100 group-hover:opacity-100'
+                        : ''
                       }
-                      ${
-                        product.image_hover && !product.sold_out
-                          ? 'group-hover:opacity-0'
-                          : ''
+                      ${product.image_hover && !product.sold_out
+                        ? 'group-hover:opacity-0'
+                        : ''
                       }
                     `}
                   />
@@ -240,15 +354,70 @@ const ProductList = () => {
                     </div>
                   )}
                 </div>
-                <div className="mt-4">
-                  <h3 className="text-sm uppercase font-normal">
-                    {product.title}
-                  </h3>
-                  <p className="text-sm mt-2 font-light">
-                    {Number(product.price).toLocaleString()} р.
-                  </p>
-                  {product.sold_out && (
-                    <p className="text-sm text-[#f95d51] mt-1">Нет в наличии</p>
+                <div className="mt-4 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-sm uppercase font-normal">
+                      {product.title}
+                    </h3>
+                    {variant === 'C' && product.stock && product.stock.length > 0 && (
+                      <div className="flex gap-2 mt-2">
+                        {product.stock
+                          .filter((s) => s.qty > 0)
+                          .slice(0, 5)
+                          .map((s) => (
+                            <span key={s.size} className="text-xs uppercase font-light">
+                              {s.size}
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                    <p className="text-sm mt-2 font-light">
+                      {Number(product.price).toLocaleString()} р.
+                    </p>
+                    {product.sold_out && (
+                      <p className="text-sm text-[#f95d51] mt-1">Нет в наличии</p>
+                    )}
+                  </div>
+                  {variant === 'B' && !product.sold_out && (
+                    <div
+                      className="relative mt-0.5 shrink-0"
+                      data-quick-picker-root={product.id}
+                    >
+                      <div
+                        className={`
+                          absolute right-full mr-2 top-1/2 -translate-y-1/2
+                          flex items-center gap-1 rounded-full bg-white px-2 py-1 shadow
+                          transition-all duration-200
+                          ${
+                            quickPickerFor === product.id
+                              ? 'opacity-100 translate-x-0 pointer-events-auto'
+                              : 'opacity-0 translate-x-2 pointer-events-none'
+                          }
+                        `}
+                      >
+                        {quickLoadingFor === product.id ? (
+                          <span className="text-[10px] uppercase tracking-wide">...</span>
+                        ) : (
+                          (quickSizesMap[product.id] || []).map((size) => (
+                            <button
+                              key={size}
+                              onClick={(e) => handleQuickAdd(e, product, size)}
+                              className="text-[10px] uppercase font-medium px-1"
+                            >
+                              {size}
+                            </button>
+                          ))
+                        )}
+                      </div>
+
+                      <button
+                        onClick={(e) => handleQuickToggle(e, product)}
+                        aria-label="Быстро в корзину"
+                        className="rounded-full p-1.5 text-black transition-colors duration-200 hover:bg-black/5"
+                      >
+                        <ShoppingBagIcon className="h-4 w-4 md:h-5 md:w-5" />
+                      </button>
+                    </div>
                   )}
                 </div>
               </Link>
@@ -281,15 +450,13 @@ const ProductList = () => {
                       alt={product.title}
                       className={`
                         w-full h-full object-cover transition-opacity duration-300
-                        ${
-                          product.sold_out
-                            ? 'opacity-100 group-hover:opacity-100'
-                            : ''
+                        ${product.sold_out
+                          ? 'opacity-100 group-hover:opacity-100'
+                          : ''
                         }
-                        ${
-                          product.image_hover && !product.sold_out
-                            ? 'group-hover:opacity-0'
-                            : ''
+                        ${product.image_hover && !product.sold_out
+                          ? 'group-hover:opacity-0'
+                          : ''
                         }
                       `}
                     />
@@ -310,11 +477,63 @@ const ProductList = () => {
                         </span>
                       </div>
                     )}
+                    {variant === 'B' && !product.sold_out && (
+                      <div
+                        className="absolute bottom-3 right-3 z-10 flex items-center gap-2"
+                        data-quick-picker-root={product.id}
+                      >
+                        <div
+                          className={`
+                            flex items-center gap-1 rounded-full bg-white px-2 py-1 shadow
+                            transition-all duration-200
+                            ${
+                              quickPickerFor === product.id
+                                ? 'opacity-100 translate-x-0 pointer-events-auto'
+                                : 'opacity-0 translate-x-2 pointer-events-none'
+                            }
+                          `}
+                        >
+                          {quickLoadingFor === product.id ? (
+                            <span className="text-[10px] uppercase tracking-wide">...</span>
+                          ) : (
+                            (quickSizesMap[product.id] || []).map((size) => (
+                              <button
+                                key={size}
+                                onClick={(e) => handleQuickAdd(e, product, size)}
+                                className="text-[10px] uppercase font-medium px-1"
+                              >
+                                {size}
+                              </button>
+                            ))
+                          )}
+                        </div>
+
+                        <button
+                          onClick={(e) => handleQuickToggle(e, product)}
+                          aria-label="Быстро в корзину"
+                          className="rounded-full bg-white/95 p-2 text-black shadow"
+                        >
+                          <ShoppingBagIcon className="h-4 w-4 md:h-5 md:w-5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="mt-3">
                     <h3 className="text-sm uppercase font-normal">
                       {product.title}
                     </h3>
+                    {variant === 'C' && product.stock && product.stock.length > 0 && (
+                      <div className="flex gap-2 mt-2">
+                        {product.stock
+                          .filter((s) => s.qty > 0)
+                          .slice(0, 5)
+                          .map((s) => (
+                            <span key={s.size} className="text-xs uppercase font-light">
+                              {s.size}
+                            </span>
+                          ))}
+                      </div>
+                    )}
                     <p className="text-sm mt-1 font-light">
                       {Number(product.price).toLocaleString()} р.
                     </p>
