@@ -38,7 +38,6 @@ router.get('/api/carousel', (req, res) => {
       desktop: desktop || mobile,
       mobile: mobile || desktop,
     }));
-
     res.json(slides);
   });
 });

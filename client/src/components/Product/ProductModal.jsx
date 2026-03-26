@@ -191,7 +191,7 @@ const ProductModal = ({
           selectedSize,
           quantity: newTotal,
         });
-        trackAbConversion('catalog_cards_test', variant, 'add_to_cart');
+
       } else {
         if (qty > 9999) {
           setToastVariant('error');
@@ -207,8 +207,11 @@ const ProductModal = ({
           selectedSize,
           quantity: qty,
         });
+
       }
 
+      trackAbConversion('catalog_cards_test', variant, 'add_to_cart');
+      
       setQuantity(1);
 
       if (typeof onClose === 'function') {
@@ -243,7 +246,7 @@ const ProductModal = ({
     onClose,
     openCart,
   ]);
- 
+
 
   useEffect(() => {
     if (!relatedRef.current) return;
@@ -273,17 +276,15 @@ const ProductModal = ({
         <div
           className={`
           transition-all duration-500
-          ${
-            isClosing
+          ${isClosing
               ? 'animate-modalExit opacity-0'
               : 'animate-modalEnter opacity-100'
-          }
+            }
         `}
         >
           <div
-            className={`relative pb-24 md:pb-26 md:px-10 min-h-screen ${
-              showCartIcon ? 'md:pt-12' : 'md:pt-26'
-            }`}
+            className={`relative pb-24 md:pb-26 md:px-10 min-h-screen ${showCartIcon ? 'md:pt-12' : 'md:pt-26'
+              }`}
           >
             {!hideCloseButton && (
               <button

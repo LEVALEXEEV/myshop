@@ -31,21 +31,16 @@ export const getAbVariant = (experimentKey, variants = ['A', 'B']) => {
   return assigned;
 };
 
-export const trackAbExposure = (experimentKey, variant) => {
-  if (!experimentKey || !variant) return;
-  metrikaReachGoal('ab_exposure', {
-    experiment: experimentKey,
-    variant,
-  });
-};
-
 export const trackAbExposureOnce = (experimentKey, variant) => {
   if (!experimentKey || !variant || !hasWindow()) return;
 
   const sessionKey = `${EXPOSURE_PREFIX}${experimentKey}:${variant}`;
   if (window.sessionStorage.getItem(sessionKey) === '1') return;
 
-  trackAbExposure(experimentKey, variant);
+  metrikaReachGoal('ab_exposure', {
+    experiment: experimentKey,
+    variant,
+  });
   window.sessionStorage.setItem(sessionKey, '1');
 };
 

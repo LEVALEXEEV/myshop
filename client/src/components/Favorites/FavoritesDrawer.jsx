@@ -66,11 +66,10 @@ const FavoritesDrawer = ({ isOpen, onClose }) => {
             selectedSize: item.selectedSize,
             quantity: inCart + 1,
           });
-          trackAbConversion('catalog_cards_test', variant, 'add_to_cart');
         } else {
           addToCart({ ...item, quantity: 1 });
-          trackAbConversion('catalog_cards_test', variant, 'add_to_cart');
         }
+        trackAbConversion('catalog_cards_test', variant, 'add_to_cart');
 
         onClose();
         setTimeout(openCart, 300);
