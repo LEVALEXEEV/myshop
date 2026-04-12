@@ -19,25 +19,24 @@ router.get('/api/carousel', (req, res) => {
     files.sort();
 
     // Сгруппировать desktop/mobile
-    const slidesMap = {};
+    const slidesMapMobile = [];
+    const slidesMapDesktop = [];
     files.forEach((file) => {
       const ext = path.extname(file);
       const name = path.basename(file, ext);
       if (name.endsWith('_mobile')) {
-        const base = name.slice(0, -7);
-        slidesMap[base] = slidesMap[base] || {};
-        slidesMap[base].mobile = `/images/carousel/${file}`;
+        slidesMapMobile.push(`/images/carousel/${file}`);
       } else {
-        slidesMap[name] = slidesMap[name] || {};
-        slidesMap[name].desktop = `/images/carousel/${file}`;
+        slidesMapDesktop.push(`/images/carousel/${file}`);
       }
     });
 
     // Собрать в массив с гарантией наличия desktop/mobile
-    const slides = Object.values(slidesMap).map(({ desktop, mobile }) => ({
-      desktop: desktop || mobile,
-      mobile: mobile || desktop,
-    }));
+    const slides = {
+      desktop: slidesMapDesktop,
+      mobile: slidesMapMobile,
+    };
+
     res.json(slides);
   });
 });

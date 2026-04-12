@@ -9,7 +9,7 @@ export default function Carousel() {
   useEffect(() => {
     axios
       .get('/api/carousel')
-      .then((res) => setSlides(res.data))
+      .then((res) => {setSlides(res.data); console.log('Получены слайды карусели:', res.data);})
       .catch(console.error);
   }, []);
 
@@ -21,11 +21,11 @@ export default function Carousel() {
     return () => mql.removeEventListener('change', handler);
   }, []);
 
-  if (!slides.length) return null;
+  if (!slides) return null;
 
   const displaySlides = isMobile
-    ? slides.filter((s) => s.mobile !== s.desktop)
-    : slides;
+    ? slides.mobile
+    : slides.desktop;
 
   if (!displaySlides.length) return null;
 
@@ -40,8 +40,7 @@ export default function Carousel() {
         className="flex transition-transform duration-700 ease-in-out"
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
-        {displaySlides.map(({ desktop, mobile }, idx) => {
-          const src = isMobile ? mobile : desktop;
+        {displaySlides.map((src, idx) => {
           return (
             <div
               key={idx}

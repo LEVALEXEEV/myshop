@@ -22,7 +22,6 @@ err()  { echo -e "${RED}[dev]${RESET} $*" >&2; }
 
 # ── PIDs дочерних процессов ───────────────────────────────────
 PIDS=()
-STARTED_DOCKER=0
 
 cleanup() {
   echo ""
@@ -73,11 +72,7 @@ if [[ "$SKIP_DOCKER" == "0" ]]; then
   done
 fi
 
-# ── 2. Миграции БД ───────────────────────────────────────────
-log "Применяем миграции..."
-"$ROOT/db/migrate.sh"
-
-# ── 3. Вспомогательная функция запуска ───────────────────────
+# ── 2. Вспомогательная функция запуска ───────────────────────
 # run_service <label> <color> <cwd> <command>
 run_service() {
   local label="$1" color="$2" cwd="$3"
@@ -95,7 +90,7 @@ run_service() {
   PIDS+=($!)
 }
 
-# ── 4. Проверяем node_modules ─────────────────────────────────
+# ── 3. Проверяем node_modules ─────────────────────────────────
 for dir in server admin client; do
   if [[ ! -d "$ROOT/$dir/node_modules" ]]; then
     warn "node_modules отсутствует в $dir, устанавливаем..."
@@ -104,7 +99,7 @@ for dir in server admin client; do
   fi
 done
 
-# ── 5. Запуск сервисов ───────────────────────────────────────
+# ── 4. Запуск сервисов ───────────────────────────────────────
 log "Запуск сервисов..."
 
 run_service "server" "${CYAN}"  "$ROOT/server" npm run dev

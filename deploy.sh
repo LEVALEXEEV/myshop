@@ -27,32 +27,16 @@ cd "$APP_DIR"
 
 # ── 1. Git ────────────────────────────────────────────────────
 log "Получаем изменения из origin/$BRANCH..."
-
-# Сохраняем images — git reset --hard удалит их если они были в старом коммите
-IMAGES_DIR="$APP_DIR/server/images"
-IMAGES_TMP="$(mktemp -d)"
-if [[ -d "$IMAGES_DIR" ]]; then
-  cp -a "$IMAGES_DIR/." "$IMAGES_TMP/"
-  log "Изображения сохранены во временную папку"
-fi
-
 git fetch origin
 git reset --hard "origin/$BRANCH"
 ok "Код обновлён: $(git log -1 --pretty='%h %s')"
-
-# Восстанавливаем images поверх .gitkeep
-if [[ -d "$IMAGES_TMP" ]]; then
-  cp -a "$IMAGES_TMP/." "$IMAGES_DIR/"
-  rm -rf "$IMAGES_TMP"
-  log "Изображения восстановлены"
-fi
 
 # ── 2. Зависимости ───────────────────────────────────────────
 log "Устанавливаем зависимости server..."
 (cd "$APP_DIR/server" && npm ci --omit=dev)
 
 log "Устанавливаем зависимости admin..."
-(cd "$APP_DIR/admin" && npm ci)
+(cd "$APP_DIR/admin" && npm ci --omit=dev)
 
 log "Устанавливаем зависимости client..."
 (cd "$APP_DIR/client" && npm ci)
@@ -62,21 +46,17 @@ log "Собираем клиент..."
 (cd "$APP_DIR/client" && npm run build)
 ok "Сборка клиента завершена → client/dist/"
 
-# ── 4. Миграции БД ───────────────────────────────────────────
-log "Применяем миграции..."
-"$APP_DIR/db/migrate.sh"
-
-# ── 5. Перезапуск сервисов ────────────────────────────────────
+# ── 4. Перезапуск сервисов ────────────────────────────────────
 log "Перезапускаем myshop-server..."
 sudo systemctl restart myshop-server
 log "Перезапускаем myshop-admin..."
 sudo systemctl restart myshop-admin
 
-# ── 6. Перезагружаем nginx (подхватывает новый dist) ─────────
+# ── 5. Перезагружаем nginx (подхватывает новый dist) ─────────
 log "Перезагружаем nginx..."
 sudo systemctl reload nginx
 
-# ── 7. Проверка состояния ─────────────────────────────────────
+# ── 6. Проверка состояния ─────────────────────────────────────
 sleep 2
 log "Проверяем сервисы..."
 
