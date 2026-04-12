@@ -9,7 +9,7 @@ export default function Carousel() {
   useEffect(() => {
     axios
       .get('/api/carousel')
-      .then((res) => {setSlides(res.data); console.log('Получены слайды карусели:', res.data);})
+      .then((res) => setSlides(res.data))
       .catch(console.error);
   }, []);
 
