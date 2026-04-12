@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
 export default function Carousel() {
-  const [slides, setSlides] = useState([]);
+  const [slides, setSlides] = useState({});
   const [current, setCurrent] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
