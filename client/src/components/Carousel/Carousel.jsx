@@ -27,7 +27,7 @@ export default function Carousel() {
     ? slides.mobile
     : slides.desktop;
 
-  if (!displaySlides.length) return null;
+  if (!displaySlides) return null;
 
   const prev = () =>
     setCurrent((i) => (i === 0 ? displaySlides.length - 1 : i - 1));
