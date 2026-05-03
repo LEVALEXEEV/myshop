@@ -41,6 +41,7 @@
       <div class="card">
         <div class="card__header">Состав заказа</div>
         <div class="table-wrap">
+          <% const variantLabel = items.some((i) => i.selectedColor) ? 'Цвет' : 'Размер'; %>
           <table style="table-layout:fixed;width:100%">
             <colgroup>
               <col style="width:60%" />
@@ -50,7 +51,7 @@
             <thead>
               <tr>
                 <th>Товар</th>
-                <th>Размер</th>
+                <th><%= variantLabel %></th>
                 <th>Кол-во</th>
               </tr>
             </thead>
@@ -66,7 +67,7 @@
                   <%= item.title %>
                   <div class="muted" style="font-size:11px">#<%= item.id %></div>
                 </td>
-                <td><%= item.size %></td>
+                <td><%= item.selectedColor || item.size || '—' %></td>
                 <td><%= item.qty %></td>
               </tr>
               <% } %>

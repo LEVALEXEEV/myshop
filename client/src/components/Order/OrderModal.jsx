@@ -57,16 +57,17 @@ const OrderModal = ({ visible, onClose }) => {
     validate();
     const hasError = Object.values(form.errors).some(Boolean);
     if (hasError) return;
-
+    console.log(cart);
     const payload = {
       full_name: fullName,
       email,
       phone,
       shipping_method: shippingMethod,
       promo: discount ? promo : null,
-      items: cart.map(({ id, selectedSize, quantity }) => ({
+      items: cart.map(({ id, selectedSize, selectedColor, quantity }) => ({
         id,
         selectedSize,
+        selectedColor,
         quantity,
       })),
       agree_policy: agreePolicy,
