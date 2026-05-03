@@ -4,6 +4,7 @@ import { useCart } from '../../context/CartContext';
 import { ImageGallery } from './ImageGallery';
 import { AccordionGroup, Accordion } from './Accordion';
 import SizeSelector from './SizeSelector';
+import ColorSelector from './ColorSelector';
 import { QuantityPicker } from './QuantityPicker';
 import FavoriteButton from './FavoriteButton';
 import RelatedProducts from './RelatedProducts';
@@ -12,6 +13,7 @@ import axios from 'axios';
 import { useModal } from '../../context/ModalContext';
 import useABExperiment from '../Analytics/useABExperiment';
 import { trackAbConversion } from '../Analytics/metrika';
+import { findStockEntry, sameVariant } from '../../utils/variant';
 
 const ProductModal = ({
   product,
@@ -21,10 +23,13 @@ const ProductModal = ({
   hideCloseButton = false,
   showCartIcon = false,
   initialSize = null,
+  initialColor = null,
   closeOnAddToCart = true,
 }) => {
+  const isColorVariant = product.variant_type === 'color';
   const [isClosing, setIsClosing] = useState(false);
   const [selectedSize, setSelectedSize] = useState(null);
+  const [selectedColor, setSelectedColor] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [activeIndex, setActiveIndex] = useState(0);
   const [showRelated, setShowRelated] = useState(false);
@@ -49,9 +54,11 @@ const ProductModal = ({
   );
 
   const sortedSizes = useMemo(() => {
+    if (isColorVariant) return [];
     if (!product.stock || product.stock.length === 0) return [];
     const order = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl'];
     return product.stock
+      .filter((s) => s.size)
       .map(({ size, qty }) => ({ size, qty }))
       .sort((a, b) => {
         const ia = order.indexOf(a.size);
@@ -61,7 +68,12 @@ const ProductModal = ({
         if (ib === -1) return -1;
         return ia - ib;
       });
-  }, [product.stock]);
+  }, [product.stock, isColorVariant]);
+
+  const colorStock = useMemo(() => {
+    if (!isColorVariant) return [];
+    return (product.stock || []).filter((s) => s.color);
+  }, [product.stock, isColorVariant]);
 
   useEffect(() => {
     open();
@@ -71,26 +83,44 @@ const ProductModal = ({
   useEffect(() => {
     setActiveIndex(0);
 
-    const availSizes = sortedSizes
-      .filter(({ qty }) => qty > 0)
-      .map(({ size }) => size);
-    if (availSizes.length > 0) {
-      if (initialSize && availSizes.includes(initialSize)) {
-        setSelectedSize(initialSize);
+    if (isColorVariant) {
+      setSelectedSize(null);
+      const availColors = colorStock
+        .filter(({ qty }) => qty > 0)
+        .map(({ color }) => color);
+      if (availColors.length > 0) {
+        if (initialColor && availColors.includes(initialColor)) {
+          setSelectedColor(initialColor);
+        } else {
+          setSelectedColor(availColors[0]);
+        }
       } else {
-        setSelectedSize(availSizes[0]);
+        setSelectedColor(null);
       }
     } else {
-      setSelectedSize(null);
+      setSelectedColor(null);
+      const availSizes = sortedSizes
+        .filter(({ qty }) => qty > 0)
+        .map(({ size }) => size);
+      if (availSizes.length > 0) {
+        if (initialSize && availSizes.includes(initialSize)) {
+          setSelectedSize(initialSize);
+        } else {
+          setSelectedSize(availSizes[0]);
+        }
+      } else {
+        setSelectedSize(null);
+      }
     }
 
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = '';
     };
-  }, [product, initialSize, sortedSizes]);
+  }, [product, initialSize, initialColor, sortedSizes, colorStock, isColorVariant]);
 
   const handleSelectSize = useCallback((size) => setSelectedSize(size), []);
+  const handleSelectColor = useCallback((color) => setSelectedColor(color), []);
 
   const handleDecrement = useCallback(() => {
     setQuantity((q) => {
@@ -111,17 +141,13 @@ const ProductModal = ({
   }, []);
 
   const handleToggleFavorite = useCallback(() => {
-    const sizeToAdd = selectedSize || 's';
+    const variantPart = isColorVariant
+      ? { selectedColor: selectedColor || (colorStock[0]?.color ?? null) }
+      : { selectedSize: selectedSize || 's' };
 
-    const wasFav = isFavorite({
-      id: product.id,
-      selectedSize: sizeToAdd,
-    });
+    const wasFav = isFavorite({ id: product.id, ...variantPart });
 
-    toggleFavorite({
-      ...product,
-      selectedSize: sizeToAdd,
-    });
+    toggleFavorite({ ...product, ...variantPart });
 
     if (!wasFav) {
       setToastVariant('default');
@@ -130,7 +156,10 @@ const ProductModal = ({
     }
   }, [
     product,
+    isColorVariant,
     selectedSize,
+    selectedColor,
+    colorStock,
     isFavorite,
     toggleFavorite,
     setToastMsg,
@@ -156,17 +185,20 @@ const ProductModal = ({
   }, [onClose]);
 
   const handleAddToCart = useCallback(async () => {
-    if (!selectedSize) return;
+    if (isColorVariant ? !selectedColor : !selectedSize) return;
     const qty = Math.max(1, parseInt(quantity, 10) || 1);
+
+    const variantPart = isColorVariant
+      ? { selectedColor }
+      : { selectedSize };
 
     try {
       const { data: fresh } = await axios.get(`/api/products/${product.id}`);
-      const stockEntry = fresh.stock?.find((s) => s.size === selectedSize);
+      const stockEntry = findStockEntry(fresh.stock, { ...variantPart });
       const available = stockEntry?.qty ?? 0;
 
-      const alreadyInCart =
-        cart.find((p) => p.id === product.id && p.selectedSize === selectedSize)
-          ?.quantity || 0;
+      const cartKey = { id: product.id, ...variantPart };
+      const alreadyInCart = cart.find((p) => sameVariant(p, cartKey))?.quantity || 0;
 
       if (qty + alreadyInCart > available) {
         setToastVariant('error');
@@ -175,9 +207,7 @@ const ProductModal = ({
         return;
       }
 
-      const existing = cart.find(
-        (p) => p.id === product.id && p.selectedSize === selectedSize
-      );
+      const existing = cart.find((p) => sameVariant(p, cartKey));
       if (existing) {
         const newTotal = existing.quantity + qty;
         if (newTotal > 9999) {
@@ -186,11 +216,7 @@ const ProductModal = ({
           setShowToast(true);
           return;
         }
-        updateQuantity({
-          id: product.id,
-          selectedSize,
-          quantity: newTotal,
-        });
+        updateQuantity({ ...cartKey, quantity: newTotal });
 
       } else {
         if (qty > 9999) {
@@ -204,7 +230,7 @@ const ProductModal = ({
           title: product.title,
           price: product.price,
           image: product.image,
-          selectedSize,
+          ...variantPart,
           quantity: qty,
         });
 
@@ -234,7 +260,9 @@ const ProductModal = ({
       setShowToast(true);
     }
   }, [
+    isColorVariant,
     selectedSize,
+    selectedColor,
     quantity,
     cart,
     product.id,
@@ -245,6 +273,8 @@ const ProductModal = ({
     addToCart,
     onClose,
     openCart,
+    closeOnAddToCart,
+    variant,
   ]);
 
 
@@ -407,20 +437,32 @@ const ProductModal = ({
                 <div className="text-base md:text-xl font-light">
                   {Number(product.price).toLocaleString()} р.
                 </div>
-                <SizeSelector
-                  sortedSizes={sortedSizes}
-                  selectedSize={selectedSize}
-                  onSelectSize={handleSelectSize}
-                  disabled={product.sold_out}
-                />
+                {isColorVariant ? (
+                  <ColorSelector
+                    colorStock={colorStock}
+                    selectedColor={selectedColor}
+                    onSelectColor={handleSelectColor}
+                    disabled={product.sold_out}
+                  />
+                ) : (
+                  <SizeSelector
+                    sortedSizes={sortedSizes}
+                    selectedSize={selectedSize}
+                    onSelectSize={handleSelectSize}
+                    disabled={product.sold_out}
+                  />
+                )}
 
                 <div className="flex items-center gap-1 mt-4">
                   {!product.sold_out && (
                     <QuantityPicker
                       quantity={quantity}
                       maxQuantity={(() => {
-                        const entry = product.stock.find(
-                          (s) => s.size === selectedSize
+                        const entry = findStockEntry(
+                          product.stock,
+                          isColorVariant
+                            ? { selectedColor }
+                            : { selectedSize }
                         );
                         return entry?.qty ?? 0;
                       })()}
@@ -447,9 +489,13 @@ const ProductModal = ({
                   )}
 
                   <FavoriteButton
-                    isFavorited={isFavorite({ id: product.id, selectedSize })}
+                    isFavorited={isFavorite(
+                      isColorVariant
+                        ? { id: product.id, selectedColor }
+                        : { id: product.id, selectedSize }
+                    )}
                     onClick={handleToggleFavorite}
-                    disabled={!selectedSize}
+                    disabled={isColorVariant ? !selectedColor : !selectedSize}
                   />
                 </div>
 
@@ -464,21 +510,23 @@ const ProductModal = ({
                       />
                     </Accordion>
 
-                    <Accordion index={1} title="Таблица размеров">
-                      <div className="pb-4">
-                        {product.size_chart ? (
-                          <img
-                            src={product.size_chart}
-                            alt="Таблица размеров"
-                            className="w-full object-contain"
-                          />
-                        ) : (
-                          <div className="text-center text-gray-500 text-sm">
-                            Таблица размеров недоступна
-                          </div>
-                        )}
-                      </div>
-                    </Accordion>
+                    {!isColorVariant && (
+                      <Accordion index={1} title="Таблица размеров">
+                        <div className="pb-4">
+                          {product.size_chart ? (
+                            <img
+                              src={product.size_chart}
+                              alt="Таблица размеров"
+                              className="w-full object-contain"
+                            />
+                          ) : (
+                            <div className="text-center text-gray-500 text-sm">
+                              Таблица размеров недоступна
+                            </div>
+                          )}
+                        </div>
+                      </Accordion>
+                    )}
 
                     <Accordion index={2} title="Доставка и оплата">
                       <div className="pb-4 text-xs md:text-sm">

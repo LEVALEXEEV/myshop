@@ -9,6 +9,10 @@ import { getExtraImagesMode, buildExtraImagesSql, serializeExtraImages } from '.
 const router = express.Router();
 const csrfProtection = csrf();
 
+function normalizeVariantType(raw) {
+  return raw === 'color' ? 'color' : 'size';
+}
+
 router.get('/', requireAuth, csrfProtection, asyncHandler(async (req, res) => {
   const { rows } = await pool.query(
     'SELECT id, title, price, category, image, sold_out FROM products ORDER BY id DESC'
@@ -33,6 +37,7 @@ router.get('/new', requireAuth, csrfProtection, (req, res) => {
       description: '',
       size_chart: '',
       sold_out: false,
+      variant_type: 'size',
     },
   });
 });
@@ -52,16 +57,19 @@ router.post('/', requireAuth, csrfProtection, asyncHandler(async (req, res) => {
   const description = (req.body.description || '').toString();
   const size_chart = textOrNull(req.body.size_chart);
   const sold_out = req.body.sold_out === 'on';
+  const variant_type = normalizeVariantType(req.body.variant_type);
 
   const mode = await getExtraImagesMode();
   const extraSql = buildExtraImagesSql(mode, 6);
   const extraVal = serializeExtraImages(mode, extra_images);
 
   const { rows } = await pool.query(
-    `INSERT INTO products (title, price, category, image, image_hover, extra_images, description, size_chart, sold_out)
-     VALUES ($1,$2,$3,$4,$5,${extraSql},$7,$8,$9)
+    `INSERT INTO products
+       (title, price, category, image, image_hover, extra_images, description, size_chart, sold_out, variant_type)
+     VALUES
+       ($1,$2,$3,$4,$5,${extraSql},$7,$8,$9,$10)
      RETURNING id`,
-    [title, price, category, image, image_hover, extraVal, description, size_chart, sold_out]
+    [title, price, category, image, image_hover, extraVal, description, size_chart, sold_out, variant_type]
   );
 
   res.redirect(`/products/${rows[0].id}`);
@@ -79,6 +87,7 @@ router.get('/:id', requireAuth, csrfProtection, asyncHandler(async (req, res) =>
     product: {
       ...product,
       extra_images_text: (Array.isArray(product.extra_images) ? product.extra_images : []).join('\n'),
+      variant_type: product.variant_type || 'size',
     },
   });
 }));
@@ -99,6 +108,7 @@ router.post('/:id', requireAuth, csrfProtection, asyncHandler(async (req, res) =
   const description = (req.body.description || '').toString();
   const size_chart = textOrNull(req.body.size_chart);
   const sold_out = req.body.sold_out === 'on';
+  const variant_type = normalizeVariantType(req.body.variant_type);
 
   const mode = await getExtraImagesMode();
   const extraSql = buildExtraImagesSql(mode, 6);
@@ -106,9 +116,11 @@ router.post('/:id', requireAuth, csrfProtection, asyncHandler(async (req, res) =
 
   await pool.query(
     `UPDATE products
-     SET title=$1, price=$2, category=$3, image=$4, image_hover=$5, extra_images=${extraSql}, description=$7, size_chart=$8, sold_out=$9
-     WHERE id=$10`,
-    [title, price, category, image, image_hover, extraVal, description, size_chart, sold_out, id]
+     SET title=$1, price=$2, category=$3, image=$4, image_hover=$5,
+         extra_images=${extraSql}, description=$7, size_chart=$8, sold_out=$9,
+         variant_type=$10
+     WHERE id=$11`,
+    [title, price, category, image, image_hover, extraVal, description, size_chart, sold_out, variant_type, id]
   );
 
   res.redirect(`/products/${id}`);

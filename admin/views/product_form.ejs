@@ -55,8 +55,41 @@
               <label for="f-sold-out">Нет в наличии (sold out)</label>
             </div>
 
+            <div class="form-group">
+              <label>Тип варианта</label>
+              <div style="display:flex;gap:16px;align-items:center">
+                <label class="form-check" style="margin:0">
+                  <input type="radio" name="variant_type" value="size"
+                    <%= (product.variant_type || 'size') === 'size' ? 'checked' : '' %> />
+                  Размеры
+                </label>
+                <label class="form-check" style="margin:0">
+                  <input type="radio" name="variant_type" value="color"
+                    <%= product.variant_type === 'color' ? 'checked' : '' %> />
+                  Цвета
+                </label>
+              </div>
+              <div class="form-hint">
+                Сами варианты (размеры или цвета вместе с количеством)
+                редактируются на странице «Управление складом».
+              </div>
+            </div>
+
           </div>
         </div>
+
+        <script>
+          (function () {
+            const radios = document.querySelectorAll('input[name="variant_type"]');
+            const sizeChartGroup = document.getElementById('f-size-chart')?.closest('.form-group');
+            const sync = () => {
+              const isColor = document.querySelector('input[name="variant_type"]:checked')?.value === 'color';
+              if (sizeChartGroup) sizeChartGroup.style.display = isColor ? 'none' : '';
+            };
+            radios.forEach((r) => r.addEventListener('change', sync));
+            sync();
+          })();
+        </script>
 
         <!-- Images -->
         <div class="card">

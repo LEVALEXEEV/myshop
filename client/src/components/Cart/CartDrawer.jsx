@@ -6,6 +6,7 @@ import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { CartItem } from './CartItem';
 import axios from 'axios';
 import Toast from '../ui/Toast';
+import { variantKey, findStockEntry } from '../../utils/variant';
 
 const CartDrawer = () => {
   const { cart, removeFromCart, updateQuantity, isCartOpen, closeCart } =
@@ -26,11 +27,11 @@ const CartDrawer = () => {
 
   useEffect(() => {
     cart.forEach((item) => {
-      const key = `${item.id}-${item.selectedSize}`;
+      const key = variantKey(item);
       axios
         .get(`/api/products/${item.id}`)
         .then(({ data }) => {
-          const entry = data.stock.find((s) => s.size === item.selectedSize);
+          const entry = findStockEntry(data.stock, item);
           setStockMap((prev) => ({
             ...prev,
             [key]: entry?.qty ?? 0,
@@ -110,7 +111,7 @@ const CartDrawer = () => {
           {cart.length > 0 ? (
             <>
               {cart.map((item) => {
-                const key = `${item.id}-${item.selectedSize}`;
+                const key = variantKey(item);
                 const available = stockMap[key] ?? 0;
                 const value = localQty[key] ?? String(item.quantity);
 
@@ -136,6 +137,7 @@ const CartDrawer = () => {
                   updateQuantity({
                     id: item.id,
                     selectedSize: item.selectedSize,
+                    selectedColor: item.selectedColor,
                     quantity: qty,
                   });
                   setLocalQty((prev) => ({ ...prev, [key]: String(qty) }));
@@ -160,6 +162,7 @@ const CartDrawer = () => {
                   removeFromCart({
                     id: item.id,
                     selectedSize: item.selectedSize,
+                    selectedColor: item.selectedColor,
                   });
                 };
 

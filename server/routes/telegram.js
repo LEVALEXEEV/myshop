@@ -18,7 +18,10 @@ async function getItemsDetails(items) {
   const mapTitle = Object.fromEntries(rows.map((r) => [r.id, r.title]));
   return items.map((it) => {
     const title = mapTitle[it.id] || `#${it.id}`;
-    return `• ${title} ×${it.quantity} (размер ${it.selectedSize})`;
+    const variantLabel = it.selectedColor
+      ? `цвет ${it.selectedColor}`
+      : `размер ${it.selectedSize}`;
+    return `• ${title} ×${it.quantity} (${variantLabel})`;
   });
 }
 

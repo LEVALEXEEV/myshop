@@ -22,6 +22,7 @@ export default function ProductDetailPage() {
 
   const searchParams = new URLSearchParams(search);
   const initialSize = searchParams.get('size') || null;
+  const initialColor = searchParams.get('color') || null;
 
   useEffect(() => {
     axios
@@ -50,6 +51,7 @@ export default function ProductDetailPage() {
         hideCloseButton={false}
         showCartIcon={true}
         initialSize={initialSize}
+        initialColor={initialColor}
         onClose={() => navigate('/', { replace: true })}
         closeOnAddToCart={false}
         onSelectProduct={(p) => {

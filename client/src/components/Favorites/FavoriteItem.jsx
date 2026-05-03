@@ -4,6 +4,12 @@ import removeItem from '../../assets/remove-item.svg';
 export const FavoriteItem = React.memo(
   ({ item, available, onAddToCart, onRemoveFavorite }) => {
     const price = Number(item.price).toLocaleString();
+    const detailUrl = item.selectedColor
+      ? `/product/${item.id}?color=${encodeURIComponent(item.selectedColor)}`
+      : `/product/${item.id}?size=${item.selectedSize}`;
+    const variantLabel = item.selectedColor
+      ? `ЦВЕТ: ${item.selectedColor.toLowerCase()}`
+      : `РАЗМЕР: ${item.selectedSize.toLowerCase()}`;
 
     return (
       <div className="py-2.5 px-4 md:px-0 mb-5 gap-2 md:gap-0 flex w-full items-start md:items-center justify-between box-border h-auto">
@@ -24,7 +30,7 @@ export const FavoriteItem = React.memo(
           </div>
           <div className="md:max-w-52 font-semibold leading-[1.45] text-black">
             <a
-              href={`/product/${item.id}?size=${item.selectedSize}`}
+              href={detailUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-lg"
@@ -35,7 +41,7 @@ export const FavoriteItem = React.memo(
               {price} р.
             </div>
             <div className="text-xs font-normal mt-[5px] opacity-[0.7]">
-              РАЗМЕР: {item.selectedSize.toLowerCase()}
+              {variantLabel}
             </div>
 
             <div className="flex items-center gap-4 mt-2">

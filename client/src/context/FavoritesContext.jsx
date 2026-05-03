@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { sameVariant } from '../utils/variant';
 
 const FavoritesContext = createContext();
 
@@ -37,14 +38,9 @@ export const FavoritesProvider = ({ children }) => {
 
   const toggleFavorite = (product) => {
     setFavorites((curr) => {
-      const exists = curr.some(
-        (p) => p.id === product.id && p.selectedSize === product.selectedSize
-      );
+      const exists = curr.some((p) => sameVariant(p, product));
       if (exists) {
-        return curr.filter(
-          (p) =>
-            !(p.id === product.id && p.selectedSize === product.selectedSize)
-        );
+        return curr.filter((p) => !sameVariant(p, product));
       } else {
         return [...curr, product];
       }
@@ -52,9 +48,7 @@ export const FavoritesProvider = ({ children }) => {
   };
 
   const isFavorite = (product) =>
-    favorites.some(
-      (p) => p.id === product.id && p.selectedSize === product.selectedSize
-    );
+    favorites.some((p) => sameVariant(p, product));
 
   return (
     <FavoritesContext.Provider

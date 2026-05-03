@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { sameVariant } from '../utils/variant';
 
 const CartContext = createContext();
 
@@ -30,12 +31,10 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = (item) => {
     setCart((curr) => {
-      const exists = curr.find(
-        (p) => p.id === item.id && p.selectedSize === item.selectedSize
-      );
+      const exists = curr.find((p) => sameVariant(p, item));
       if (exists) {
         return curr.map((p) =>
-          p.id === item.id && p.selectedSize === item.selectedSize
+          sameVariant(p, item)
             ? { ...p, quantity: p.quantity + item.quantity }
             : p
         );
@@ -44,15 +43,11 @@ export const CartProvider = ({ children }) => {
       }
     });
   };
-  const removeFromCart = ({ id, selectedSize }) =>
+  const removeFromCart = (item) =>
+    setCart((curr) => curr.filter((p) => !sameVariant(p, item)));
+  const updateQuantity = (item) =>
     setCart((curr) =>
-      curr.filter((p) => !(p.id === id && p.selectedSize === selectedSize))
-    );
-  const updateQuantity = ({ id, selectedSize, quantity }) =>
-    setCart((curr) =>
-      curr.map((p) =>
-        p.id === id && p.selectedSize === selectedSize ? { ...p, quantity } : p
-      )
+      curr.map((p) => (sameVariant(p, item) ? { ...p, quantity: item.quantity } : p))
     );
 
   const openCart = () => setCartOpen(true);

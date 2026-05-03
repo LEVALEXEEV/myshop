@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef, memo } from 'react';
 import removeItemIcon from '../../assets/remove-item.svg';
 import { QuantityControl } from '../ui/QuantityControl';
 import axios from 'axios';
+import { variantKey, findStockEntry } from '../../utils/variant';
 
 const SHIPPING_FEE = 449;
 
@@ -19,19 +20,18 @@ function OrderItemsComponent({
   useEffect(() => {
     const qtys = {};
     cart.forEach((item) => {
-      const key = `${item.id}-${item.selectedSize}`;
-      qtys[key] = String(item.quantity);
+      qtys[variantKey(item)] = String(item.quantity);
     });
     setLocalQty(qtys);
   }, [cart]);
 
   useEffect(() => {
     cart.forEach((item) => {
-      const key = `${item.id}-${item.selectedSize}`;
+      const key = variantKey(item);
       axios
         .get(`/api/products/${item.id}`)
         .then(({ data }) => {
-          const entry = data.stock.find((s) => s.size === item.selectedSize);
+          const entry = findStockEntry(data.stock, item);
           setStockMap((m) => ({ ...m, [key]: entry?.qty ?? 0 }));
         })
         .catch(() => {
@@ -47,7 +47,7 @@ function OrderItemsComponent({
 
   const makeHandlers = useCallback(
     (item) => {
-      const key = `${item.id}-${item.selectedSize}`;
+      const key = variantKey(item);
       const available = stockMap[key] ?? 0;
 
       const triggerError = () => {
@@ -67,6 +67,7 @@ function OrderItemsComponent({
         updateQuantity({
           id: item.id,
           selectedSize: item.selectedSize,
+          selectedColor: item.selectedColor,
           quantity: q,
         });
         setLocalQty((prev) => ({ ...prev, [key]: String(q) }));
@@ -99,7 +100,11 @@ function OrderItemsComponent({
           changeQty(num);
         },
         onRemove: () => {
-          removeFromCart({ id: item.id, selectedSize: item.selectedSize });
+          removeFromCart({
+            id: item.id,
+            selectedSize: item.selectedSize,
+            selectedColor: item.selectedColor,
+          });
         },
       };
     },
@@ -109,9 +114,12 @@ function OrderItemsComponent({
   return (
     <div className="md:inline md:float-left md:mx-5 md:w-full md:max-w-[560px] gap-6">
       {cart.map((item) => {
-        const key = `${item.id}-${item.selectedSize}`;
+        const key = variantKey(item);
         const value = localQty[key] ?? String(item.quantity);
         const error = errorMap[key] || false;
+        const variantLabel = item.selectedColor
+          ? `ЦВЕТ: ${item.selectedColor.toLowerCase()}`
+          : `РАЗМЕР: ${item.selectedSize.toLowerCase()}`;
         const { onDecrement, onIncrement, onChange, onBlur, onRemove } =
           makeHandlers(item);
 
@@ -133,7 +141,7 @@ function OrderItemsComponent({
                   {item.title}
                 </div>
                 <div className="text-xs font-normal leading-[1.55] opacity-[0.7] mb-2 md:mb-0">
-                  РАЗМЕР: {item.selectedSize.toLowerCase()}
+                  {variantLabel}
                 </div>
                 <div className="flex md:hidden flex-row items-center gap-3">
                   <QuantityControl

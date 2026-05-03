@@ -14,36 +14,75 @@
   <div class="page-header">
     <div>
       <div class="page-header__title">Склад: <%= product.title %></div>
-      <div class="page-header__sub">Строки с пустым размером игнорируются. Все предыдущие записи будут заменены.</div>
+      <div class="page-header__sub">
+        <% if (variantType === 'color') { %>
+          Тип варианта: <strong>цвет</strong>. Строки с пустым названием цвета игнорируются. Все предыдущие записи будут заменены.
+        <% } else { %>
+          Тип варианта: <strong>размер</strong>. Строки с пустым размером игнорируются. Все предыдущие записи будут заменены.
+        <% } %>
+      </div>
     </div>
   </div>
 
-  <div class="card" style="max-width:480px">
-    <div class="card__header">Остатки по размерам</div>
+  <div class="card" style="max-width:560px">
+    <div class="card__header">
+      <% if (variantType === 'color') { %>Остатки по цветам<% } else { %>Остатки по размерам<% } %>
+    </div>
     <div class="card__body">
       <form method="post" action="/products/<%= product.id %>/stock">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
 
-        <table style="margin-bottom:16px">
+        <table style="margin-bottom:16px;width:100%">
           <thead>
             <tr>
-              <th>Размер</th>
-              <th>Количество</th>
+              <% if (variantType === 'color') { %>
+                <th style="text-align:left">Название</th>
+                <th style="width:90px">Цвет</th>
+                <th style="width:120px">Количество</th>
+              <% } else { %>
+                <th style="text-align:left">Размер</th>
+                <th style="width:120px">Количество</th>
+              <% } %>
             </tr>
           </thead>
           <tbody>
-            <% const rows = (stock && stock.length ? stock : [{ size: 's', qty: 0 }, { size: 'm', qty: 0 }, { size: 'l', qty: 0 }]); %>
-            <% for (const row of rows) { %>
-              <tr>
-                <td><input class="form-control" name="size" value="<%= row.size %>" /></td>
-                <td><input class="form-control" name="qty" type="number" min="0" step="1" value="<%= row.qty %>" /></td>
-              </tr>
-            <% } %>
-            <% for (let i = 0; i < 6; i++) { %>
-              <tr>
-                <td><input class="form-control" name="size" value="" placeholder="напр., xl" /></td>
-                <td><input class="form-control" name="qty" type="number" min="0" step="1" value="" placeholder="0" /></td>
-              </tr>
+            <% if (variantType === 'color') { %>
+              <% const rows = (stock && stock.length ? stock : []); %>
+              <% for (const row of rows) { %>
+                <tr>
+                  <td><input class="form-control" name="color" value="<%= row.color %>" placeholder="напр., Красный" /></td>
+                  <td>
+                    <input type="color" name="color_hex"
+                      value="<%= row.color_hex || '#000000' %>"
+                      style="width:60px;height:38px;padding:2px;cursor:pointer" />
+                  </td>
+                  <td><input class="form-control" name="qty" type="number" min="0" step="1" value="<%= row.qty %>" /></td>
+                </tr>
+              <% } %>
+              <% for (let i = 0; i < 4; i++) { %>
+                <tr>
+                  <td><input class="form-control" name="color" value="" placeholder="напр., Чёрный" /></td>
+                  <td>
+                    <input type="color" name="color_hex" value="#000000"
+                      style="width:60px;height:38px;padding:2px;cursor:pointer" />
+                  </td>
+                  <td><input class="form-control" name="qty" type="number" min="0" step="1" value="" placeholder="0" /></td>
+                </tr>
+              <% } %>
+            <% } else { %>
+              <% const rows = (stock && stock.length ? stock : [{ size: 's', qty: 0 }, { size: 'm', qty: 0 }, { size: 'l', qty: 0 }]); %>
+              <% for (const row of rows) { %>
+                <tr>
+                  <td><input class="form-control" name="size" value="<%= row.size %>" /></td>
+                  <td><input class="form-control" name="qty" type="number" min="0" step="1" value="<%= row.qty %>" /></td>
+                </tr>
+              <% } %>
+              <% for (let i = 0; i < 6; i++) { %>
+                <tr>
+                  <td><input class="form-control" name="size" value="" placeholder="напр., xl" /></td>
+                  <td><input class="form-control" name="qty" type="number" min="0" step="1" value="" placeholder="0" /></td>
+                </tr>
+              <% } %>
             <% } %>
           </tbody>
         </table>

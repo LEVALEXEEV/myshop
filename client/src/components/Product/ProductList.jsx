@@ -14,6 +14,7 @@ import { useAnimateOnView } from '../../hooks/useAnimateOnView';
 import useABExperiment from '../Analytics/useABExperiment';
 import { trackAbConversion } from '../Analytics/metrika';
 import { useCart } from '../../context/CartContext';
+import { sameVariant } from '../../utils/variant';
 
 const SLIDER_OPTIONS = {
   loop: false,
@@ -108,25 +109,31 @@ const ProductList = () => {
   const variant = useABExperiment('catalog_cards_test', ['A', 'B', 'C']);
   const { addToCart, openCart, cart } = useCart();
   const [quickPickerFor, setQuickPickerFor] = useState(null);
-  const [quickSizesMap, setQuickSizesMap] = useState({});
+  // Карта быстрых вариантов: { [productId]: { type: 'size'|'color', items: [{ value, hex? }] } }
+  const [quickVariantsMap, setQuickVariantsMap] = useState({});
   const [quickLoadingFor, setQuickLoadingFor] = useState(null);
 
   const handleQuickAdd = useCallback(
-    async (e, product, selectedSize) => {
+    async (e, product, selectedValue) => {
       e.stopPropagation();
       e.preventDefault();
       try {
         const { data: fresh } = await axios.get(`/api/products/${product.id}`);
-        const entry = selectedSize
+        const isColor = fresh.variant_type === 'color';
+        const entry = selectedValue
           ? (fresh.stock || []).find(
-              (s) => s.size === selectedSize && s.qty > 0
+              (s) =>
+                ((isColor ? s.color : s.size) === selectedValue) && s.qty > 0
             ) || null
           : (fresh.stock || []).find((s) => s.qty > 0) || null;
         if (!entry) return;
 
-        const exists = cart.find(
-          (p) => p.id === product.id && p.selectedSize === entry.size
-        );
+        const variantPart = isColor
+          ? { selectedColor: entry.color }
+          : { selectedSize: entry.size };
+
+        const cartKey = { id: product.id, ...variantPart };
+        const exists = cart.find((p) => sameVariant(p, cartKey));
         const inCart = exists ? exists.quantity : 0;
         if (entry.qty - inCart < 1) return;
 
@@ -135,7 +142,7 @@ const ProductList = () => {
           title: product.title,
           price: product.price,
           image: product.image,
-          selectedSize: entry.size,
+          ...variantPart,
           quantity: 1,
         });
         trackAbConversion('catalog_cards_test', variant, 'add_to_cart');
@@ -161,16 +168,27 @@ const ProductList = () => {
       setQuickLoadingFor(product.id);
       try {
         const { data: fresh } = await axios.get(`/api/products/${product.id}`);
-        const sizes = (fresh.stock || [])
-          .filter((s) => s.qty > 0)
-          .map((s) => s.size)
-          .sort(sortSizes);
-        setQuickSizesMap((prev) => ({ ...prev, [product.id]: sizes }));
-        if (sizes.length > 0) {
+        const isColor = fresh.variant_type === 'color';
+        let info;
+        if (isColor) {
+          const items = (fresh.stock || [])
+            .filter((s) => s.qty > 0 && s.color)
+            .map((s) => ({ value: s.color, hex: s.color_hex || '#ccc' }));
+          info = { type: 'color', items };
+        } else {
+          const items = (fresh.stock || [])
+            .filter((s) => s.qty > 0 && s.size)
+            .map((s) => s.size)
+            .sort(sortSizes)
+            .map((value) => ({ value }));
+          info = { type: 'size', items };
+        }
+        setQuickVariantsMap((prev) => ({ ...prev, [product.id]: info }));
+        if (info.items.length > 0) {
           setQuickPickerFor(product.id);
         }
       } catch (err) {
-        console.error('Quick size fetch failed', err);
+        console.error('Quick variants fetch failed', err);
       } finally {
         setQuickLoadingFor(null);
       }
@@ -364,11 +382,20 @@ const ProductList = () => {
                         {product.stock
                           .filter((s) => s.qty > 0)
                           .slice(0, 5)
-                          .map((s) => (
-                            <span key={s.size} className="text-xs uppercase font-light">
-                              {s.size}
-                            </span>
-                          ))}
+                          .map((s) =>
+                            product.variant_type === 'color' ? (
+                              <span
+                                key={s.color}
+                                title={s.color}
+                                className="inline-block w-3 h-3 rounded-full border border-black/15"
+                                style={{ backgroundColor: s.color_hex || '#ccc' }}
+                              />
+                            ) : (
+                              <span key={s.size} className="text-xs uppercase font-light">
+                                {s.size}
+                              </span>
+                            )
+                          )}
                       </div>
                     )}
                     <p className="text-sm mt-2 font-light">
@@ -398,15 +425,26 @@ const ProductList = () => {
                         {quickLoadingFor === product.id ? (
                           <span className="text-[10px] uppercase tracking-wide">...</span>
                         ) : (
-                          (quickSizesMap[product.id] || []).map((size) => (
-                            <button
-                              key={size}
-                              onClick={(e) => handleQuickAdd(e, product, size)}
-                              className="text-[10px] uppercase font-medium px-1"
-                            >
-                              {size}
-                            </button>
-                          ))
+                          (quickVariantsMap[product.id]?.items || []).map((it) =>
+                            quickVariantsMap[product.id]?.type === 'color' ? (
+                              <button
+                                key={it.value}
+                                onClick={(e) => handleQuickAdd(e, product, it.value)}
+                                title={it.value}
+                                aria-label={it.value}
+                                className="w-4 h-4 rounded-full border border-black/15"
+                                style={{ backgroundColor: it.hex }}
+                              />
+                            ) : (
+                              <button
+                                key={it.value}
+                                onClick={(e) => handleQuickAdd(e, product, it.value)}
+                                className="text-[10px] uppercase font-medium px-1"
+                              >
+                                {it.value}
+                              </button>
+                            )
+                          )
                         )}
                       </div>
 
@@ -496,15 +534,26 @@ const ProductList = () => {
                           {quickLoadingFor === product.id ? (
                             <span className="text-[10px] uppercase tracking-wide">...</span>
                           ) : (
-                            (quickSizesMap[product.id] || []).map((size) => (
-                              <button
-                                key={size}
-                                onClick={(e) => handleQuickAdd(e, product, size)}
-                                className="text-[10px] uppercase font-medium px-1"
-                              >
-                                {size}
-                              </button>
-                            ))
+                            (quickVariantsMap[product.id]?.items || []).map((it) =>
+                              quickVariantsMap[product.id]?.type === 'color' ? (
+                                <button
+                                  key={it.value}
+                                  onClick={(e) => handleQuickAdd(e, product, it.value)}
+                                  title={it.value}
+                                  aria-label={it.value}
+                                  className="w-4 h-4 rounded-full border border-black/15"
+                                  style={{ backgroundColor: it.hex }}
+                                />
+                              ) : (
+                                <button
+                                  key={it.value}
+                                  onClick={(e) => handleQuickAdd(e, product, it.value)}
+                                  className="text-[10px] uppercase font-medium px-1"
+                                >
+                                  {it.value}
+                                </button>
+                              )
+                            )
                           )}
                         </div>
 
@@ -527,11 +576,20 @@ const ProductList = () => {
                         {product.stock
                           .filter((s) => s.qty > 0)
                           .slice(0, 5)
-                          .map((s) => (
-                            <span key={s.size} className="text-xs uppercase font-light">
-                              {s.size}
-                            </span>
-                          ))}
+                          .map((s) =>
+                            product.variant_type === 'color' ? (
+                              <span
+                                key={s.color}
+                                title={s.color}
+                                className="inline-block w-3 h-3 rounded-full border border-black/15"
+                                style={{ backgroundColor: s.color_hex || '#ccc' }}
+                              />
+                            ) : (
+                              <span key={s.size} className="text-xs uppercase font-light">
+                                {s.size}
+                              </span>
+                            )
+                          )}
                       </div>
                     )}
                     <p className="text-sm mt-1 font-light">

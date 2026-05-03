@@ -14,6 +14,12 @@ export const CartItem = React.memo(
     error,
   }) => {
     const price = (item.price * item.quantity).toLocaleString();
+    const detailUrl = item.selectedColor
+      ? `/product/${item.id}?color=${encodeURIComponent(item.selectedColor)}`
+      : `/product/${item.id}?size=${item.selectedSize}`;
+    const variantLabel = item.selectedColor
+      ? `ЦВЕТ: ${item.selectedColor.toLowerCase()}`
+      : `РАЗМЕР: ${item.selectedSize.toLowerCase()}`;
 
     return (
       <div className="relative py-2.5 px-4 md:px-0 mb-5 gap-2 md:gap-0 flex items-start md:items-center justify-between">
@@ -27,7 +33,7 @@ export const CartItem = React.memo(
           </div>
           <div className="flex md:block flex-col justify-start md:max-w-32 text-black">
             <a
-              href={`/product/${item.id}?size=${item.selectedSize}`}
+              href={detailUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-base leading-[1.55] font-bold"
@@ -35,7 +41,7 @@ export const CartItem = React.memo(
               {item.title}
             </a>
             <div className="text-xs font-normal leading-[1.55] opacity-[0.7] mb-[10px] md:mb-0">
-              РАЗМЕР: {item.selectedSize.toLowerCase()}
+              {variantLabel}
             </div>
 
             <div className="flex md:hidden items-center gap-4">

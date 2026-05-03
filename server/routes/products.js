@@ -7,6 +7,21 @@ const pool = new Pool({
   connectionString: process.env.PG_LINK,
 });
 
+// SQL-агрегат: остатки в виде [{ size, color, color_hex, qty }]
+const STOCK_AGG = `
+  COALESCE(
+    jsonb_agg(
+      jsonb_build_object(
+        'size', ps.size,
+        'color', ps.color,
+        'color_hex', ps.color_hex,
+        'qty', ps.qty
+      )
+    ) FILTER (WHERE ps.product_id IS NOT NULL),
+    '[]'
+  ) AS stock
+`;
+
 // GET /api/products — получить список товаров с фильтрами
 router.get('/api/products', async (req, res) => {
   try {
@@ -40,12 +55,7 @@ router.get('/api/products', async (req, res) => {
     const sql = `
       SELECT
         p.*,
-        COALESCE(
-          jsonb_agg(
-            jsonb_build_object('size', ps.size, 'qty', ps.qty)
-          ) FILTER (WHERE ps.size IS NOT NULL),
-          '[]'
-        ) AS stock
+        ${STOCK_AGG}
       FROM products p
       LEFT JOIN product_stock ps ON ps.product_id = p.id
       ${where}
@@ -68,12 +78,7 @@ router.get('/api/products/:id', async (req, res) => {
     const sql = `
       SELECT
         p.*,
-        COALESCE(
-          jsonb_agg(
-            jsonb_build_object('size', ps.size, 'qty', ps.qty)
-          ) FILTER (WHERE ps.size IS NOT NULL),
-          '[]'
-        ) AS stock
+        ${STOCK_AGG}
       FROM products p
       LEFT JOIN product_stock ps ON ps.product_id = p.id
       WHERE p.id = $1

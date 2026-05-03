@@ -121,11 +121,13 @@ router.post('/api/orders', async (req, res) => {
     return res.status(400).json({ error: 'Нужно указать хотя бы один товар' });
   }
   for (const it of items) {
+    const hasSize = typeof it.selectedSize === 'string' && it.selectedSize.length > 0;
+    const hasColor = typeof it.selectedColor === 'string' && it.selectedColor.length > 0;
     if (
       typeof it.id !== 'number' ||
-      typeof it.selectedSize !== 'string' ||
       typeof it.quantity !== 'number' ||
-      it.quantity <= 0
+      it.quantity <= 0 ||
+      hasSize === hasColor // ровно один из вариантов должен быть указан
     ) {
       return res.status(400).json({ error: 'Некорректный объект в items' });
     }

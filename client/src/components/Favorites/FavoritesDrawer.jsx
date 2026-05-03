@@ -7,6 +7,7 @@ import axios from 'axios';
 import Toast from '../ui/Toast';
 import useABExperiment from '../Analytics/useABExperiment';
 import { trackAbConversion } from '../Analytics/metrika';
+import { variantKey, findStockEntry, sameVariant } from '../../utils/variant';
 
 const FavoritesDrawer = ({ isOpen, onClose }) => {
   const { favorites, toggleFavorite } = useFavorites();
@@ -42,19 +43,16 @@ const FavoritesDrawer = ({ isOpen, onClose }) => {
     async (item) => {
       try {
         const { data: fresh } = await axios.get(`/api/products/${item.id}`);
-        const stockEntry = fresh.stock.find(
-          (s) => s.size === item.selectedSize
-        );
+        const stockEntry = findStockEntry(fresh.stock, item);
         const available = stockEntry?.qty ?? 0;
 
-        const exists = cart.find(
-          (p) => p.id === item.id && p.selectedSize === item.selectedSize
-        );
+        const exists = cart.find((p) => sameVariant(p, item));
         const inCart = exists ? exists.quantity : 0;
 
         if (available - inCart < 1) {
+          const variantWord = item.selectedColor ? 'цвета' : 'размера';
           setToastMsg(
-            `Нельзя добавить: в наличии только ${available} шт. данного размера`
+            `Нельзя добавить: в наличии только ${available} шт. данного ${variantWord}`
           );
           setShowToast(true);
           return;
@@ -64,6 +62,7 @@ const FavoritesDrawer = ({ isOpen, onClose }) => {
           updateQuantity({
             id: item.id,
             selectedSize: item.selectedSize,
+            selectedColor: item.selectedColor,
             quantity: inCart + 1,
           });
         } else {
@@ -140,12 +139,12 @@ const FavoritesDrawer = ({ isOpen, onClose }) => {
           {favorites.length > 0 ? (
             favorites.map((item) => {
               const stock = stockMap[item.id] || [];
-              const entry = stock.find((s) => s.size === item.selectedSize);
+              const entry = findStockEntry(stock, item);
               const available = (entry?.qty ?? 0) > 0;
 
               return (
                 <FavoriteItem
-                  key={`${item.id}-${item.selectedSize}`}
+                  key={variantKey(item)}
                   item={item}
                   available={available}
                   onAddToCart={() => handleAddToCart(item)}

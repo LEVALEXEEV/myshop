@@ -12,6 +12,11 @@ set -euo pipefail
 APP_DIR="/var/www/myshop"
 BRANCH="${DEPLOY_BRANCH:-main}"
 
+SERVER_PORT="${SERVER_PORT:-3000}"
+ADMIN_PORT="${ADMIN_PORT:-3001}"
+# Сколько секунд ждём, пока сервис поднимется после restart
+STARTUP_TIMEOUT=15
+
 BOLD='\033[1m'
 GREEN='\033[1;32m'
 YELLOW='\033[1;33m'
@@ -24,6 +29,22 @@ warn() { echo -e "${YELLOW}[deploy]${RESET} $*"; }
 err()  { echo -e "${RED}[deploy]${RESET} $*" >&2; exit 1; }
 
 cd "$APP_DIR"
+
+# ── 0. Убиваем любые «дикие» процессы на портах ──────────────
+# Защита от процессов, запущенных вне systemd (node вручную, pm2 и т.п.)
+kill_orphans() {
+  local port="$1"
+  local pids
+  pids=$(ss -tlnp "sport = :${port}" 2>/dev/null \
+    | grep -oP 'pid=\K[0-9]+' || true)
+  if [[ -n "$pids" ]]; then
+    warn "Порт ${port} занят (PID: ${pids}). Принудительно завершаем..."
+    # shellcheck disable=SC2086
+    kill -TERM $pids 2>/dev/null || true
+    sleep 2
+    kill -KILL $pids 2>/dev/null || true
+  fi
+}
 
 # ── 1. Git ────────────────────────────────────────────────────
 log "Получаем изменения из origin/$BRANCH..."
@@ -47,24 +68,54 @@ log "Собираем клиент..."
 ok "Сборка клиента завершена → client/dist/"
 
 # ── 4. Перезапуск сервисов ────────────────────────────────────
-log "Перезапускаем myshop-server..."
-sudo systemctl restart myshop-server
-log "Перезапускаем myshop-admin..."
-sudo systemctl restart myshop-admin
+# daemon-reload на случай, если unit-файлы менялись
+sudo systemctl daemon-reload
+
+restart_service() {
+  local svc="$1"
+  local port="$2"
+
+  log "Останавливаем $svc..."
+  sudo systemctl stop "$svc" || true
+
+  # Убиваем всё, что осталось на порту (запущенное вне systemd)
+  kill_orphans "$port"
+
+  log "Запускаем $svc..."
+  sudo systemctl start "$svc"
+
+  # Ждём, пока сервис реально поднимется и начнёт слушать порт
+  local elapsed=0
+  while ! ss -tlnp "sport = :${port}" 2>/dev/null | grep -q ":${port}"; do
+    if (( elapsed >= STARTUP_TIMEOUT )); then
+      err "$svc не поднялся за ${STARTUP_TIMEOUT}с. Лог: journalctl -u $svc -n 50 --no-pager"
+    fi
+    sleep 1
+    (( elapsed++ ))
+  done
+
+  ok "$svc слушает порт ${port} (через ${elapsed}с)"
+}
+
+restart_service myshop-server "$SERVER_PORT"
+restart_service myshop-admin  "$ADMIN_PORT"
 
 # ── 5. Перезагружаем nginx (подхватывает новый dist) ─────────
 log "Перезагружаем nginx..."
+sudo nginx -t || err "Конфиг nginx невалиден — перезагрузка отменена"
 sudo systemctl reload nginx
+ok "nginx перезагружен"
 
-# ── 6. Проверка состояния ─────────────────────────────────────
-sleep 2
-log "Проверяем сервисы..."
-
+# ── 6. Финальная проверка состояния ──────────────────────────
+log "Финальная проверка..."
 for svc in myshop-server myshop-admin; do
-  if systemctl is-active --quiet "$svc"; then
+  state=$(systemctl is-active "$svc" 2>/dev/null || true)
+  if [[ "$state" == "active" ]]; then
     ok "$svc — running"
   else
-    err "$svc — FAILED. Лог: journalctl -u $svc -n 30 --no-pager"
+    # Показываем лог и выходим с ошибкой
+    journalctl -u "$svc" -n 20 --no-pager >&2 || true
+    err "$svc — state: ${state}"
   fi
 done
 
