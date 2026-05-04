@@ -6,6 +6,7 @@ After=network.target postgresql.service
 Type=simple
 WorkingDirectory=/var/www/myshop/server
 EnvironmentFile=/var/www/myshop/server/.env
+Environment=NODE_OPTIONS=--dns-result-order=ipv4first
 ExecStart=/usr/bin/node /var/www/myshop/server/server.js
 Restart=always
 RestartSec=2
