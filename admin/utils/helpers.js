@@ -20,6 +20,13 @@ export function textOrNull(value) {
   return s ? s : null;
 }
 
+export function dateOrNull(value) {
+  const s = (value ?? '').toString().trim();
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 export async function ensureDir(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
 }

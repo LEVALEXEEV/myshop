@@ -55,6 +55,36 @@
               <label for="f-sold-out">Нет в наличии (sold out)</label>
             </div>
 
+            <div class="form-check">
+              <input id="f-published" name="published" type="checkbox" <%= product.published ? 'checked' : '' %> />
+              <label for="f-published">Опубликовано (виден в каталоге)</label>
+            </div>
+
+            <%
+              let publishedAtLocal = '';
+              if (product.published_at) {
+                const d = new Date(product.published_at);
+                const pad = (n) => String(n).padStart(2, '0');
+                publishedAtLocal =
+                  d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+                  'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+              }
+            %>
+            <div class="form-group">
+              <label for="f-published-at">Дата и время публикации</label>
+              <input
+                id="f-published-at"
+                class="form-control"
+                name="published_at"
+                type="datetime-local"
+                value="<%= publishedAtLocal %>"
+              />
+              <div class="form-hint">
+                Товар появится в каталоге не раньше указанного момента.
+                Если оставить пустым и отметить «Опубликовано» — будет проставлено текущее время.
+              </div>
+            </div>
+
             <div class="form-group">
               <label>Тип варианта</label>
               <div style="display:flex;gap:16px;align-items:center">

@@ -26,7 +26,7 @@ const STOCK_AGG = `
 router.get('/api/products', async (req, res) => {
   try {
     const { category, search, ids } = req.query;
-    const conditions = [];
+    const conditions = ['p.published = TRUE', 'p.published_at <= NOW()'];
     const values = [];
 
     if (ids) {
@@ -51,7 +51,7 @@ router.get('/api/products', async (req, res) => {
       });
     }
 
-    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+    const where = 'WHERE ' + conditions.join(' AND ');
     const sql = `
       SELECT
         p.*,
@@ -81,7 +81,7 @@ router.get('/api/products/:id', async (req, res) => {
         ${STOCK_AGG}
       FROM products p
       LEFT JOIN product_stock ps ON ps.product_id = p.id
-      WHERE p.id = $1
+      WHERE p.id = $1 AND p.published = TRUE AND p.published_at <= NOW()
       GROUP BY p.id
     `;
     const { rows } = await pool.query(sql, [id]);

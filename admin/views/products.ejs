@@ -20,6 +20,7 @@
             <th>Цена, ₽</th>
             <th>Категория</th>
             <th>Статус</th>
+            <th>Опубликовать</th>
             <th>Действия</th>
           </tr>
         </thead>
@@ -39,6 +40,27 @@
                   <span class="badge badge-green">В продаже</span>
                 <% } %>
               </td>
+              <td style="text-align: center;">
+                <input
+                  type="checkbox"
+                  class="js-publish-toggle"
+                  data-id="<%= p.id %>"
+                  <%= p.published ? 'checked' : '' %>
+                />
+                <span>
+                  <%
+                    let publishedAtLabel = '';
+                    if (p.published_at) {
+                      const d = new Date(p.published_at);
+                      const pad = (n) => String(n).padStart(2, '0');
+                      publishedAtLabel =
+                        pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getFullYear() % 100) +
+                        ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+                    }
+                  %>
+                  <%= publishedAtLabel %>
+                </span>
+              </td>
               <td>
                 <div style="display:flex;gap:6px">
                   <a href="/products/<%= p.id %>" class="btn btn-ghost btn-sm">Изменить</a>
@@ -55,5 +77,31 @@
     </div>
   </div>
 </div>
+<script>
+  (function () {
+    const csrf = '<%= csrfToken %>';
+    document.querySelectorAll('.js-publish-toggle').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const id = cb.dataset.id;
+        const wanted = cb.checked;
+        cb.disabled = true;
+        try {
+          const body = new URLSearchParams({ _csrf: csrf, published: wanted ? 'on' : '' });
+          const res = await fetch(`/products/${id}/published`, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+            body,
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+        } catch (err) {
+          cb.checked = !wanted;
+          alert('Не удалось изменить публикацию: ' + err.message);
+        } finally {
+          cb.disabled = false;
+        }
+      });
+    });
+  })();
+</script>
 </body>
 </html>
