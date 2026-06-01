@@ -58,7 +58,7 @@ const ProductList = () => {
 
   useEffect(() => {
     axios
-      .get('/api/products', { params: category === 'Все' ? {} : { category } })
+      .get('/api/products', { params: category === 'all' ? {} : { category } })
       .then((res) => setProducts(res.data))
       .catch(console.error);
   }, [category]);
