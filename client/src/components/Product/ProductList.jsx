@@ -48,7 +48,7 @@ const shuffle = (arr) => {
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
-  const [category, setCategory] = useState('Все');
+  const [category, setCategory] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
   const [currentSlide, setCurrentSlide] = useState(0);

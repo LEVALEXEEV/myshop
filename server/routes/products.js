@@ -39,7 +39,7 @@ router.get('/api/products', async (req, res) => {
         conditions.push(`p.id = ANY($${values.length})`);
       }
     }
-    if (category && category !== 'Все') {
+    if (category && category !== 'all') {
       values.push(category);
       conditions.push(`p.category = $${values.length}`);
     }
@@ -60,7 +60,7 @@ router.get('/api/products', async (req, res) => {
       LEFT JOIN product_stock ps ON ps.product_id = p.id
       ${where}
       GROUP BY p.id
-      ORDER BY p.sold_out DESC, p.id ASC
+      ORDER BY p.sold_out ASC, p.published_at ASC, p.id ASC
     `;
 
     const { rows } = await pool.query(sql, values);
